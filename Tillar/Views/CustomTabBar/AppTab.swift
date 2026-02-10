@@ -7,23 +7,22 @@
 import Foundation
 
 enum AppTab: Int, CaseIterable {
-    case home, courses, progress, profile
+    case home, translator, chat, profile
 
     var title: String {
         switch self {
-        case .home: return "Главная"
-        case .courses: return "Курсы"
-        case .progress: return "Прогресс"
+        case .home: return "Главны"
+        case .translator: return "Переводчик"
+        case .chat: return "Чат"
         case .profile: return "Профиль"
         }
     }
 
-    /// Имена ассетов (как у тебя)
     var iconName: String {
         switch self {
         case .home: return "main"
-        case .courses: return "translate"
-        case .progress: return "chat"
+        case .translator: return "translate"
+        case .chat: return "chat"
         case .profile: return "profile"
         }
     }
