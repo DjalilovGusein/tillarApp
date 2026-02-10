@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D20D59872F2136B000CC482E /* AlamofireDynamic in Frameworks */ = {isa = PBXBuildFile; productRef = D20D59862F2136B000CC482E /* AlamofireDynamic */; };
+		D20D59872F2136B000CC482E /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = D20D59862F2136B000CC482E /* Alamofire */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,7 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D20D59872F2136B000CC482E /* AlamofireDynamic in Frameworks */,
+				D20D59872F2136B000CC482E /* Alamofire in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -70,7 +70,7 @@
 			);
 			name = Tillar;
 			packageProductDependencies = (
-				D20D59862F2136B000CC482E /* AlamofireDynamic */,
+				D20D59862F2136B000CC482E /* Alamofire */,
 			);
 			productName = Tillar;
 			productReference = D20279752EAA730C00DA0B57 /* Tillar.app */;
@@ -348,10 +348,10 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		D20D59862F2136B000CC482E /* AlamofireDynamic */ = {
+		D20D59862F2136B000CC482E /* Alamofire */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D20D59852F2136B000CC482E /* XCRemoteSwiftPackageReference "Alamofire" */;
-			productName = AlamofireDynamic;
+			productName = Alamofire;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
