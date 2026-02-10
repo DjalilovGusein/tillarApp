@@ -10,10 +10,10 @@ struct TabBarRootView: View {
                 switch selection {
                 case .home:
                     HomeView()
-                case .courses:
-                    CoursesView()
-                case .progress:
-                    ProgressViewScreen()
+                case .translator:
+                    TranslatorView()
+                case .chat:
+                    ChatView()
                 case .profile:
                     ProfileView()
                 }

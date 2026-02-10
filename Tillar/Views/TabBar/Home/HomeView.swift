@@ -724,22 +724,11 @@ private struct LessonCard: View {
 
 // MARK: - Other tabs (placeholders)
 
-struct CoursesView: View {
+struct ChatView: View {
     var body: some View {
         ZStack {
             Color.background.ignoresSafeArea()
-            Text("Курсы")
-                .font(.title2.weight(.bold))
-                .foregroundStyle(.primaryText)
-        }
-    }
-}
-
-struct ProgressViewScreen: View {
-    var body: some View {
-        ZStack {
-            Color.background.ignoresSafeArea()
-            Text("Прогресс")
+            Text("Чат")
                 .font(.title2.weight(.bold))
                 .foregroundStyle(.primaryText)
         }
@@ -768,12 +757,8 @@ struct ProfileView: View {
         .preferredColorScheme(.dark)
 }
 
-#Preview("Courses View") {
-    CoursesView()
-}
-
-#Preview("Progress View") {
-    ProgressViewScreen()
+#Preview("Chat View") {
+    ChatView()
 }
 
 #Preview("Profile View") {
