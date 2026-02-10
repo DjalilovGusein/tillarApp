@@ -7,7 +7,13 @@
 import Foundation
 import SwiftUI
 
-let UD = UserDefaults(suiteName: "group.uz.tillar.tillar")!
+let UD: UserDefaults = {
+    if let sharedDefaults = UserDefaults(suiteName: "group.uz.tillar.tillar") {
+        return sharedDefaults
+    }
+
+    return .standard
+}()
 
 
 struct HideKeyboardOnTapModifier: ViewModifier {
