@@ -1,36 +1,49 @@
+//
+//  TranslatorView.swift
+//  Tillar
+//
+//  Created by Gusein Djalilov on 06/01/26.
+//
+
 import SwiftUI
 
 struct TranslatorView: View {
     @State private var inputText: String = ""
+    @StateObject private var vm = HomeViewModel()
 
     var body: some View {
         ZStack {
-            Color(red: 0.94, green: 0.94, blue: 0.96).ignoresSafeArea()
-
+            Color.background.ignoresSafeArea()
+            
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 14) {
-                    Text("Переводчик")
-                        .font(.system(size: 38, weight: .semibold))
-                        .foregroundStyle(Color.primaryText)
-                        .padding(.top, 6)
-
-                    languagePicker
-
-                    inputCard
-
-                    TranslationResultCard(
-                        text: "Pulimni qachon qaytarib berasan?",
-                        isFavorite: true
+                VStack(spacing: 16) {
+                    
+                    HeaderView(
+                        mode: vm.mode,
+                        onNotificationTap: vm.openNotifications,
+                        onBack: vm.closeNotifications
                     )
-
-                    TranslationResultCard(
-                        text: "Pulingni baribir olomisan!",
-                        isFavorite: false
-                    )
-
-                    Spacer(minLength: 120)
+                    .padding(.top, -200)
+                    
+                    VStack(spacing: 16) {
+                        languagePicker
+                        inputCard
+                        
+                        TranslationResultCard(
+                            text: "Pulimni qachon qaytarib berasan?",
+                            isFavorite: true
+                        )
+                        
+                        TranslationResultCard(
+                            text: "Pulingni baribir olomisan!",
+                            isFavorite: false
+                        )
+                        
+                        Spacer(minLength: 120)
+                    }
+                    .padding(.horizontal, 16)
                 }
-                .padding(.horizontal, 16)
+                .padding(.top, 6)
             }
         }
     }
@@ -51,7 +64,7 @@ struct TranslatorView: View {
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 12)
-        .background(Color.white)
+        .background(Color.primaryObject)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 3)
     }
@@ -80,7 +93,7 @@ struct TranslatorView: View {
             }
         }
         .padding(16)
-        .background(Color.white)
+        .background(Color.primaryObject)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 4)
     }
@@ -114,7 +127,7 @@ private struct TranslationResultCard: View {
             .foregroundStyle(Color.gray.opacity(0.65))
         }
         .padding(16)
-        .background(Color.white)
+        .background(Color.primaryObject)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 4)
     }

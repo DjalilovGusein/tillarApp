@@ -46,12 +46,11 @@ struct HomeView: View {
                     }
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
 
-                    Spacer(minLength: 100) // Extra space for FAB
+                    Spacer(minLength: 100)
                 }
                 .padding(.top, 6)
             }
 
-            // Floating Action Button
             if vm.mode == .home {
                 FloatingActionButton {
                     // TODO: Add action
@@ -326,7 +325,7 @@ private struct FABButtonStyle: ButtonStyle {
 
 // MARK: - Header
 
-private struct HeaderView: View {
+struct HeaderView: View {
 
     let mode: HomeMode
     let onNotificationTap: () -> Void
