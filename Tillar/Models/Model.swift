@@ -9,23 +9,16 @@ import Foundation
 
 // MARK: - Common
 
-struct APIEnvelope<T: Decodable>: Decodable {
-    let success: Bool?
-    let status: Int?
-    let message: String?
-    let data: T?
-}
-
-struct APIMessage: Decodable {
-    let success: Bool?
-    let message: String?
-}
-
 struct ErrorResponse: Decodable {
     let errors: [String]?
 }
 
-// MARK: - Auth / Keycloak
+struct APISuccessMessage: Decodable {
+    let success: Bool?
+    let message: String?
+}
+
+// MARK: - Auth
 
 struct RegisterRequest: Encodable {
     let username: String
@@ -33,12 +26,6 @@ struct RegisterRequest: Encodable {
     let password: String
     let firstName: String
     let lastName: String
-
-    enum CodingKeys: String, CodingKey {
-        case username, email, password
-        case firstName = "first_name"
-        case lastName  = "last_name"
-    }
 }
 
 struct LoginRequest: Encodable {
@@ -48,21 +35,13 @@ struct LoginRequest: Encodable {
 
 struct RefreshRequest: Encodable {
     let refreshToken: String
-    enum CodingKeys: String, CodingKey { case refreshToken = "refresh_token" }
 }
 
 struct AuthTokens: Decodable {
-    let accessToken: String
-    let refreshToken: String
+    let accessToken: String?
+    let refreshToken: String?
     let expiresIn: Int?
     let tokenType: String?
-
-    enum CodingKeys: String, CodingKey {
-        case accessToken = "access_token"
-        case refreshToken = "refresh_token"
-        case expiresIn = "expires_in"
-        case tokenType = "token_type"
-    }
 }
 
 struct AuthUser: Decodable {
@@ -73,18 +52,20 @@ struct AuthUser: Decodable {
     let lastName: String?
     let isActive: Bool?
     let isStaff: Bool?
-    let keycloakUUID: String?
-
-    enum CodingKeys: String, CodingKey {
-        case id, username, email
-        case firstName = "first_name"
-        case lastName  = "last_name"
-        case isActive  = "is_active"
-        case isStaff   = "is_staff"
-        case keycloakUUID = "keycloak_uuid"
-    }
+    let keycloakUuid: String?
 }
 
+// POST /api/keycloak/register/
+struct RegisterResponse: Decodable {
+    let success: Bool?
+    let message: String?
+    let emailVerificationRequired: Bool?
+    let emailVerificationSent: Bool?
+    let user: AuthUser?
+    let tokens: AuthTokens?
+}
+
+// POST /api/keycloak/login/
 struct LoginResponse: Decodable {
     let success: Bool?
     let message: String?
@@ -92,29 +73,44 @@ struct LoginResponse: Decodable {
     let tokens: AuthTokens?
 }
 
+// POST /api/keycloak/refresh/
+struct RefreshResponse: Decodable {
+    let success: Bool?
+    let tokens: AuthTokens?
+}
+
+// GET /api/keycloak/userinfo/
+struct UserInfoResponse: Decodable {
+    let success: Bool?
+    let user: AuthUser?
+}
+
 // MARK: - Microservices Proxy
 
 struct MicroserviceProxyRequest: Encodable {
     let service: String
-    let method: String     // "GET" / "POST" как строка (в Postman так) :contentReference[oaicite:5]{index=5}
+    let method: String       // "GET"/"POST"
     let endpoint: String
-    let userId: Bool
+    let userId: Bool?
+    let data: [String: AnyCodable]?
 }
 
-// Пример: Coins баланс (в ответе у тебя может быть любой формат — ниже самый безопасный вариант)
+// MARK: - Coins
+
+// coins: data приходит массивом [{coinId, amount}] :contentReference[oaicite:4]{index=4}
 struct CoinsBalanceResponse: Decodable {
     let success: Bool?
     let status: Int?
-    let data: CoinsBalanceData?
+    let data: [CoinBalanceItem]?
 }
 
-struct CoinsBalanceData: Decodable {
-    let coins: Int?
-    let balance: Int?
+struct CoinBalanceItem: Decodable, Identifiable {
+    var id: Int { coinId ?? 0 }
+    let coinId: Int?
     let amount: Int?
 }
 
-// MARK: - News
+// MARK: - News (через proxy)
 
 struct NewsListResponse: Decodable {
     let success: Bool?
@@ -126,6 +122,12 @@ struct NewsListData: Decodable {
     let content: [NewsItem]?
     let totalPages: Int?
     let totalElements: Int?
+    let numberOfElements: Int?
+    let size: Int?
+    let number: Int?
+    let first: Bool?
+    let last: Bool?
+    let empty: Bool?
 }
 
 struct NewsItem: Decodable, Identifiable {
@@ -150,4 +152,55 @@ struct NewsTranslation: Decodable {
     let summary: String?
     let content: String?
     let localizedSlug: String?
+}
+
+// MARK: - AI Bot (пример — подстрой под свой ответ)
+
+struct AIBotResponse: Decodable {
+    let success: Bool?
+    let status: Int?
+    let data: AIBotData?
+}
+
+struct AIBotData: Decodable {
+    let message: String?
+    let answer: String?
+}
+
+// MARK: - AnyCodable for `data` in microservice proxy
+
+struct AnyCodable: Codable {
+    let value: Any
+
+    init(_ value: Any) { self.value = value }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.singleValueContainer()
+
+        if let v = try? c.decode(Bool.self) { value = v; return }
+        if let v = try? c.decode(Int.self) { value = v; return }
+        if let v = try? c.decode(Double.self) { value = v; return }
+        if let v = try? c.decode(String.self) { value = v; return }
+        if let v = try? c.decode([AnyCodable].self) { value = v.map { $0.value }; return }
+        if let v = try? c.decode([String: AnyCodable].self) { value = v.mapValues { $0.value }; return }
+
+        value = NSNull()
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+
+        switch value {
+        case let v as Bool: try c.encode(v)
+        case let v as Int: try c.encode(v)
+        case let v as Double: try c.encode(v)
+        case let v as String: try c.encode(v)
+        case let v as [Any]:
+            try c.encode(v.map { AnyCodable($0) })
+        case let v as [String: Any]:
+            try c.encode(v.mapValues { AnyCodable($0) })
+        default:
+            try c.encodeNil()
+        }
+    }
 }
