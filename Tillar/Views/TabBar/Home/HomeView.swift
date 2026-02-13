@@ -734,17 +734,6 @@ struct ChatView: View {
     }
 }
 
-struct ProfileView: View {
-    var body: some View {
-        ZStack {
-            Color.background.ignoresSafeArea()
-            Text("Профиль")
-                .font(.title2.weight(.bold))
-                .foregroundStyle(.primaryText)
-        }
-    }
-}
-
 // MARK: - Preview
 
 #Preview("Home View") {
@@ -758,8 +747,4 @@ struct ProfileView: View {
 
 #Preview("Chat View") {
     ChatView()
-}
-
-#Preview("Profile View") {
-    ProfileView()
 }
