@@ -18,14 +18,12 @@ struct ProfileView: View {
 
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 0) {
-
                     ProfileHeaderView(vm: vm)
-                        .padding(.top, -200)
 
-                    VStack(spacing: 16) {
+                    VStack(spacing: 12) {
                         StatsRowView(stats: vm.stats)
                             .padding(.horizontal, 16)
-                            .padding(.top, 20)
+                            .padding(.top, 16)
 
                         MenuSection(title: "Аккаунт") {
                             MenuRow(sfSymbol: "person.fill",
@@ -73,6 +71,7 @@ struct ProfileView: View {
                             router.popToRoot()
                         }
                         .padding(.horizontal, 16)
+                        .padding(.top, 4)
 
                         Spacer(minLength: 100)
                     }
@@ -90,88 +89,76 @@ private struct ProfileHeaderView: View {
     @ObservedObject var vm: ProfileViewModel
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            ProfileHeaderBackground()
-                .frame(height: 300)
+        ZStack {
+            // Background gradient
+            LinearGradient(
+                colors: [Color.linkPrimary, Color.linkPrimary.opacity(0.8)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea(edges: .top)
 
-            VStack(spacing: 0) {
-                Spacer()
+            // Decorative circles
+            Circle()
+                .fill(Color.white.opacity(0.08))
+                .frame(width: 220, height: 220)
+                .offset(x: -100, y: -60)
 
-                HStack(alignment: .bottom, spacing: 14) {
-                    // Avatar circle with initials
-                    ZStack {
-                        Circle()
-                            .fill(Color.white.opacity(0.25))
-                            .frame(width: 72, height: 72)
+            Circle()
+                .fill(Color.white.opacity(0.06))
+                .frame(width: 160, height: 160)
+                .offset(x: 130, y: 20)
 
-                        Text(vm.initials)
-                            .font(.system(size: 26, weight: .bold))
-                            .foregroundStyle(.white)
-                    }
+            // Content
+            VStack(spacing: 12) {
+                // Avatar
+                ZStack {
+                    Circle()
+                        .fill(Color.white.opacity(0.2))
+                        .frame(width: 88, height: 88)
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(vm.displayName)
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
+                    Circle()
+                        .fill(Color.white.opacity(0.15))
+                        .frame(width: 76, height: 76)
 
-                        if let email = vm.user?.email, !email.isEmpty {
-                            Text(email)
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(.white.opacity(0.8))
-                                .lineLimit(1)
-                        }
-
-                        HStack(spacing: 6) {
-                            Image("coin").frame(width: 16, height: 16)
-                            Text("4326")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(.white.opacity(0.9))
-                        }
-                    }
-
-                    Spacer()
+                    Text(vm.initials)
+                        .font(.system(size: 30, weight: .bold))
+                        .foregroundStyle(.white)
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 20)
+                .padding(.top, 56)
+
+                // Name
+                Text(vm.displayName)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+
+                // Email
+                if let email = vm.user?.email, !email.isEmpty {
+                    Text(email)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundStyle(.white.opacity(0.75))
+                        .lineLimit(1)
+                }
+
+                // Coin badge
+                HStack(spacing: 5) {
+                    Image("coin")
+                        .resizable()
+                        .frame(width: 16, height: 16)
+                    Text("4326")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .background(Color.white.opacity(0.2))
+                .clipShape(Capsule())
+                .padding(.bottom, 28)
             }
+            .frame(maxWidth: .infinity)
         }
-        .cornerRadius(18)
-    }
-}
-
-private struct ProfileHeaderBackground: View {
-    var body: some View {
-        LinearGradient(
-            colors: [
-                Color.linkPrimary.opacity(0.85),
-                Color.linkPrimary.opacity(0.95),
-                Color.linkPrimary.opacity(0.75)
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .overlay(
-            ZStack {
-                RoundedRectangle(cornerRadius: 22)
-                    .fill(Color.white.opacity(0.10))
-                    .frame(width: 280, height: 140)
-                    .rotationEffect(.degrees(-12))
-                    .offset(x: -70, y: 30)
-
-                RoundedRectangle(cornerRadius: 22)
-                    .fill(Color.white.opacity(0.07))
-                    .frame(width: 220, height: 110)
-                    .rotationEffect(.degrees(-12))
-                    .offset(x: -50, y: 50)
-
-                RoundedRectangle(cornerRadius: 22)
-                    .fill(Color.white.opacity(0.10))
-                    .frame(width: 280, height: 140)
-                    .rotationEffect(.degrees(8))
-                    .offset(x: 90, y: 10)
-            }
-        )
+        .frame(minHeight: 260)
     }
 }
 
@@ -182,7 +169,7 @@ private struct StatsRowView: View {
     let stats: [ProfileViewModel.StatItem]
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             ForEach(stats) { stat in
                 StatCard(stat: stat)
             }
@@ -197,30 +184,30 @@ private struct StatCard: View {
     private var iconColor: Color {
         switch stat.color {
         case "orange": return .orange
-        case "yellow": return .yellow
+        case "yellow": return Color(red: 0.95, green: 0.77, blue: 0.06)
         default: return .linkPrimary
         }
     }
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 5) {
             Image(systemName: stat.sfSymbol)
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(iconColor)
 
             Text(stat.value)
-                .font(.system(size: 22, weight: .bold))
+                .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(.primaryText)
 
             Text(stat.label)
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.tertiaryText)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 14)
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: .black.opacity(0.07), radius: 10, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 3)
     }
 }
 
@@ -232,18 +219,20 @@ private struct MenuSection<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.tertiaryText)
-                .padding(.leading, 4)
+                .textCase(.uppercase)
+                .tracking(0.4)
+                .padding(.leading, 6)
 
             VStack(spacing: 0) {
                 content
             }
             .background(Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 4)
+            .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 3)
         }
     }
 }
@@ -257,7 +246,7 @@ private struct MenuRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 14) {
+            HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
                         .fill(color.opacity(0.15))
@@ -274,11 +263,11 @@ private struct MenuRow: View {
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.tertiaryText)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.tertiaryText.opacity(0.6))
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 13)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
         }
         .buttonStyle(.plain)
     }
@@ -292,19 +281,19 @@ private struct LogoutButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack {
+            HStack(spacing: 8) {
                 Spacer()
                 Image(systemName: "rectangle.portrait.and.arrow.right")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                 Text("Выйти из аккаунта")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                 Spacer()
             }
             .foregroundStyle(.red)
-            .padding(.vertical, 16)
+            .padding(.vertical, 15)
             .background(Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 4)
+            .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 3)
         }
         .buttonStyle(.plain)
     }
