@@ -30,6 +30,7 @@ struct SignInView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(width: 80, height: 80)
+                        .foregroundStyle(Color.accentColor)
                         .clipShape(RoundedRectangle(cornerRadius: 20))
                         .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 4)
 
@@ -87,7 +88,9 @@ struct SignInView: View {
 
                 // MARK: – Login Button
                 Button {
-                    viewModel.login(username: login, password: password)
+                    viewModel.login(username: login, password: password) {
+                        router.push(.tabBar)
+                    }
                 } label: {
                     if viewModel.isLoading {
                         ProgressView()
@@ -171,14 +174,20 @@ struct SignInView: View {
                 .padding(.top, 28)
                 .padding(.bottom, 40)
             }
+            .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.primaryObject)
+                            .shadow(color: .black.opacity(0.05), radius: 20, x: 0, y: 10)
+                    )
+                    .padding(16)
         }
         .background(Color.background.ignoresSafeArea())
         .navigationBarBackButtonHidden(true)
-        .onChange(of: viewModel.user) { _, user in
+       /* .onChange(of: viewModel.user) { _, user in
             if user != nil {
                 router.popToRoot()
             }
-        }
+        } */
     }
 }
 

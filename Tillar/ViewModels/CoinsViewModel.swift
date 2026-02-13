@@ -26,8 +26,7 @@ final class CoinsViewModel: ObservableObject {
 
                 switch result {
                 case .success(let resp):
-                    // подстрой под фактический ответ (coins/balance/amount)
-                    self.coins = resp.data?.coins ?? resp.data?.balance ?? resp.data?.amount ?? 0
+                    self.coins = resp.data?.first?.amount ?? 0
                 case .failure(let err):
                     self.errorText = err.localizedDescription
                 }

@@ -39,7 +39,7 @@ final class APIManager {
     static let shared = APIManager()
 
     // host без завершающего "/"
-    private let baseURL = "https://api.test.hayotex.uz"
+    private let baseURL = "https://local.openedx.io:8000"
 
     private let decoder: JSONDecoder = {
         let d = JSONDecoder()

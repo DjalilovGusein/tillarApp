@@ -18,7 +18,7 @@ final class NewsViewModel: ObservableObject {
     func load(page: Int = 0, size: Int = 20) {
         isLoading = true
         errorText = nil
-
+/*
         APIManager.shared.getNewsList(page: page, size: size) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self else { return }
@@ -31,6 +31,6 @@ final class NewsViewModel: ObservableObject {
                     self.errorText = err.localizedDescription
                 }
             }
-        }
+        } */
     }
 }

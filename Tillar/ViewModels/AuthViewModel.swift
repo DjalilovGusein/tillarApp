@@ -13,9 +13,9 @@ final class AuthViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorText: String?
 
-    @Published var user: AuthUser?
+    @Published var user: UserInfoResponse?
 
-    func login(username: String, password: String) {
+    func login(username: String, password: String, completion: @escaping(() -> ())) {
         isLoading = true
         errorText = nil
 
@@ -27,10 +27,11 @@ final class AuthViewModel: ObservableObject {
                 switch result {
                 case .success(let resp):
                     if let tokens = resp.tokens {
-                        UD.accessToken = tokens.accessToken
-                        UD.refreshToken = tokens.refreshToken
+                        UD.accessToken = tokens.accessToken ?? ""
+                        UD.refreshToken = tokens.refreshToken ?? ""
                     }
-                    self.user = resp.user
+                   // self.user = resp.user
+                    completion()
 
                 case .failure(let err):
                     self.errorText = err.localizedDescription
@@ -42,23 +43,6 @@ final class AuthViewModel: ObservableObject {
     func refresh() {
         isLoading = true
         errorText = nil
-
-        APIManager.shared.refreshToken { [weak self] result in
-            DispatchQueue.main.async {
-                guard let self else { return }
-                self.isLoading = false
-
-                switch result {
-                case .success(let env):
-                    if let tokens = env.data {
-                        UD.accessToken = tokens.accessToken
-                        UD.refreshToken = tokens.refreshToken
-                    }
-                case .failure(let err):
-                    self.errorText = err.localizedDescription
-                }
-            }
-        }
     }
 
     func loadUserInfo() {

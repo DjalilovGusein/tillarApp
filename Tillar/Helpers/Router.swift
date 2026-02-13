@@ -21,6 +21,7 @@ enum AppRoute: Hashable {
     case createAccount
     case forgotPassword
     case resetPassword
+    case tabBar
 }
 
 struct NavigationHost<Route: Hashable, Root: View, Destination: View>: View {
@@ -48,7 +49,7 @@ struct NavigationHost<Route: Hashable, Root: View, Destination: View>: View {
 struct AppRootView: View {
     var body: some View {
         NavigationHost {
-            TabBarRootView()
+            SignInView()
         } destination: { (route: AppRoute) in
             switch route {
             case .signIn:
@@ -59,6 +60,8 @@ struct AppRootView: View {
                 ForgotPasswordView()
             case .resetPassword:
                 ResetPasswordView()
+            case .tabBar:
+                TabBarRootView()
             }
         }
     }
