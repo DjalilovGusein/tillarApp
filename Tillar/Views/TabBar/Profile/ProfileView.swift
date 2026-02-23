@@ -12,69 +12,127 @@ struct ProfileView: View {
     @StateObject private var vm = ProfileViewModel()
     @EnvironmentObject private var router: Router<AppRoute>
 
+    @AppStorage("tillar_dark_mode") private var isDarkMode: Bool = false
+
     var body: some View {
         ZStack {
             Color.background.ignoresSafeArea()
 
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 0) {
-                    ProfileHeaderView(vm: vm)
+                VStack(spacing: 14) {
 
-                    VStack(spacing: 12) {
-                        StatsRowView(stats: vm.stats)
-                            .padding(.horizontal, 16)
-                            .padding(.top, 16)
-
-                        MenuSection(title: "Аккаунт") {
-                            MenuRow(sfSymbol: "person.fill",
-                                    color: .blue,
-                                    title: "Личные данные") {}
-                            Divider().padding(.leading, 52)
-                            MenuRow(sfSymbol: "bell.fill",
-                                    color: .orange,
-                                    title: "Уведомления") {}
-                            Divider().padding(.leading, 52)
-                            MenuRow(sfSymbol: "globe",
-                                    color: .green,
-                                    title: "Язык приложения") {}
+                    ProfileWaveHeaderView(
+                        initials: vm.initials,
+                        coins: "4326"
+                    )
+                    .padding(.top, -90)
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(vm.displayName)
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundStyle(.primaryText)
+                                .lineLimit(1)
+                            
+                            Text(vm.user?.email ?? "@codilboyev_")
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundStyle(.tertiaryText)
+                                .lineLimit(1)
+                        }.padding(.leading, 8)
+                        Spacer()
+                        Button(action: {
+                            
+                        }) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(Color.white)
+                                    .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 3)
+                                
+                                Image(systemName: "pencil")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(Color.primaryText)
+                            }
+                            .frame(width: 44, height: 44)
                         }
-                        .padding(.horizontal, 16)
-
-                        MenuSection(title: "Обучение") {
-                            MenuRow(sfSymbol: "chart.bar.fill",
-                                    color: .purple,
-                                    title: "Мой прогресс") {}
-                            Divider().padding(.leading, 52)
-                            MenuRow(sfSymbol: "trophy.fill",
-                                    color: .yellow,
-                                    title: "Достижения") {}
-                            Divider().padding(.leading, 52)
-                            MenuRow(sfSymbol: "bookmark.fill",
-                                    color: .red,
-                                    title: "Сохранённые уроки") {}
-                        }
-                        .padding(.horizontal, 16)
-
-                        MenuSection(title: "Поддержка") {
-                            MenuRow(sfSymbol: "questionmark.circle.fill",
-                                    color: .teal,
-                                    title: "Помощь и поддержка") {}
-                            Divider().padding(.leading, 52)
-                            MenuRow(sfSymbol: "star.fill",
-                                    color: .yellow,
-                                    title: "Оценить приложение") {}
-                        }
-                        .padding(.horizontal, 16)
-
-                        LogoutButton {
-                            vm.logout()
-                            router.popToRoot()
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 4)
-
-                        Spacer(minLength: 100)
+                        .buttonStyle(.plain)
+                        .padding(.trailing, 16)
                     }
+
+                    ProBannerView(
+                        title: "Подписка PRO",
+                        subtitle: "Выберите один из трех тарифов.",
+                        buttonTitle: "Выбрать",
+                        onTap: {
+                            // TODO: router.push(.pro)
+                        }
+                    )
+                    .padding(.horizontal, 16)
+
+                    ProfileMenuCard {
+                        ProfileMenuRow(
+                            icon: "book.closed",
+                            title: "Мои уроки",
+                            onTap: { /* TODO */ }
+                        )
+                        DividerInset()
+
+                        ProfileMenuRow(
+                            icon: "chart.xyaxis.line",
+                            title: "Мой прогресс",
+                            onTap: { /* TODO */ }
+                        )
+                        DividerInset()
+
+                        ProfileMenuRow(
+                            icon: "bookmark",
+                            title: "Избранные",
+                            onTap: { /* TODO */ }
+                        )
+                        DividerInset()
+
+                        ProfileMenuRow(
+                            icon: "cart",
+                            title: "Магазин",
+                            onTap: { /* TODO */ }
+                        )
+                        DividerInset()
+
+                        ProfileToggleRow(
+                            icon: "moon",
+                            title: "Темный режим",
+                            isOn: $isDarkMode
+                        )
+                    }
+                    .padding(.horizontal, 16)
+
+                    ProfileMenuCard {
+                        ProfileMenuRow(
+                            icon: "creditcard",
+                            title: "Оплата",
+                            onTap: { /* TODO */ }
+                        )
+                        DividerInset()
+
+                        ProfileMenuRow(
+                            icon: "headphones",
+                            title: "Служба Поддержки",
+                            onTap: { /* TODO */ }
+                        )
+                        DividerInset()
+
+                        ProfileMenuRow(
+                            icon: "rectangle.portrait.and.arrow.right",
+                            title: "Выйти",
+                            titleColor: .red,
+                            iconColor: .red,
+                            onTap: {
+                                vm.logout()
+                                router.popToRoot()
+                            }
+                        )
+                    }
+                    .padding(.horizontal, 16)
+
+                    Spacer(minLength: 110)
                 }
             }
         }
@@ -82,232 +140,242 @@ struct ProfileView: View {
     }
 }
 
-// MARK: - Header
+// MARK: - Header (Wave)
 
-private struct ProfileHeaderView: View {
+private struct ProfileWaveHeaderView: View {
 
-    @ObservedObject var vm: ProfileViewModel
+    let initials: String
+    let coins: String
 
     var body: some View {
-        ZStack {
-            // Background gradient
-            LinearGradient(
-                colors: [Color.linkPrimary, Color.linkPrimary.opacity(0.8)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea(edges: .top)
+        ZStack(alignment: .top) {
+            Image("tillarLogo")
+                .padding(.top, 80)
+                .foregroundStyle(.white)
+                .zIndex(100)
+            VStack {
+                HStack(alignment: .center, spacing: 12) {
+                    AvatarView(initials: initials)
+                        .padding(.leading, 16)
+                    Spacer()
+                    HStack(spacing: 10) {
+                        SocialIcon("paperplane.fill")
+                        SocialIcon("camera.fill")
+                        SocialIcon("xmark")
+                        SocialIcon("f.cursive")
+                        Spacer()
+                        
+                        CoinPill(coins: coins)
+                    }
+                }
+                .padding(.top, 112)
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Color.black)
+                        .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 4)
+                )
+            }
+            .frame(height: 220)
+        }
+    }
 
-            // Decorative circles
-            Circle()
-                .fill(Color.white.opacity(0.08))
-                .frame(width: 220, height: 220)
-                .offset(x: -100, y: -60)
+    private struct SocialIcon: View {
+        let systemName: String
+        init(_ systemName: String) { self.systemName = systemName }
 
-            Circle()
-                .fill(Color.white.opacity(0.06))
-                .frame(width: 160, height: 160)
-                .offset(x: 130, y: 20)
+        var body: some View {
+            Image(systemName: systemName)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 20, height: 20)
+        }
+    }
 
-            // Content
-            VStack(spacing: 12) {
-                // Avatar
+    private struct CoinPill: View {
+        let coins: String
+
+        var body: some View {
+            HStack(spacing: 8) {
                 ZStack {
-                    Circle()
-                        .fill(Color.white.opacity(0.2))
-                        .frame(width: 88, height: 88)
-
-                    Circle()
-                        .fill(Color.white.opacity(0.15))
-                        .frame(width: 76, height: 76)
-
-                    Text(vm.initials)
-                        .font(.system(size: 30, weight: .bold))
-                        .foregroundStyle(.white)
+                    Circle().fill(Color.yellow.opacity(0.95))
+                    Text("tll")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.black.opacity(0.85))
                 }
-                .padding(.top, 56)
+                .frame(width: 22, height: 22)
 
-                // Name
-                Text(vm.displayName)
-                    .font(.system(size: 20, weight: .bold))
+                Text(coins)
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.white)
-                    .lineLimit(1)
-
-                // Email
-                if let email = vm.user?.email, !email.isEmpty {
-                    Text(email)
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundStyle(.white.opacity(0.75))
-                        .lineLimit(1)
-                }
-
-                // Coin badge
-                HStack(spacing: 5) {
-                    Image("coin")
-                        .resizable()
-                        .frame(width: 16, height: 16)
-                    Text("4326")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 5)
-                .background(Color.white.opacity(0.2))
-                .clipShape(Capsule())
-                .padding(.bottom, 28)
             }
-            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Color.black.opacity(0.28))
+            .clipShape(Capsule())
         }
-        .frame(minHeight: 260)
     }
-}
 
-// MARK: - Stats Row
+    private struct AvatarView: View {
+        let initials: String
 
-private struct StatsRowView: View {
-
-    let stats: [ProfileViewModel.StatItem]
-
-    var body: some View {
-        HStack(spacing: 10) {
-            ForEach(stats) { stat in
-                StatCard(stat: stat)
+        var body: some View {
+            ZStack {
+                Circle()
+                    .fill(Color.gray)
+                Text(initials.isEmpty ? "R" : initials)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.primaryText)
             }
+            .frame(width: 86, height: 86)
+            .padding(.bottom, -30)
         }
     }
 }
 
-private struct StatCard: View {
 
-    let stat: ProfileViewModel.StatItem
+// MARK: - PRO Banner
 
-    private var iconColor: Color {
-        switch stat.color {
-        case "orange": return .orange
-        case "yellow": return Color(red: 0.95, green: 0.77, blue: 0.06)
-        default: return .linkPrimary
-        }
-    }
-
-    var body: some View {
-        VStack(spacing: 5) {
-            Image(systemName: stat.sfSymbol)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(iconColor)
-
-            Text(stat.value)
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(.primaryText)
-
-            Text(stat.label)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.tertiaryText)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 3)
-    }
-}
-
-// MARK: - Menu Section
-
-private struct MenuSection<Content: View>: View {
+private struct ProBannerView: View {
 
     let title: String
+    let subtitle: String
+    let buttonTitle: String
+    let onTap: () -> Void
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.white)
+
+                Text(subtitle)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundStyle(.white.opacity(0.85))
+            }
+
+            Spacer()
+
+            Button(action: onTap) {
+                Text(buttonTitle)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(
+                        Capsule().fill(Color.white.opacity(0.18))
+                    )
+                    .overlay(
+                        Capsule().stroke(Color.white.opacity(0.18), lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color(red: 0.04, green: 0.32, blue: 0.98),
+                    Color(red: 0.08, green: 0.65, blue: 0.98)
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: .black.opacity(0.08), radius: 14, x: 0, y: 6)
+    }
+}
+
+// MARK: - Menu Card
+
+private struct ProfileMenuCard<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.tertiaryText)
-                .textCase(.uppercase)
-                .tracking(0.4)
-                .padding(.leading, 6)
-
-            VStack(spacing: 0) {
-                content
-            }
-            .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 3)
+        VStack(spacing: 0) {
+            content
         }
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 4)
     }
 }
 
-private struct MenuRow: View {
+private struct DividerInset: View {
+    var body: some View {
+        Divider()
+            .padding(.leading, 50)
+    }
+}
 
-    let sfSymbol: String
-    let color: Color
+private struct ProfileMenuRow: View {
+
+    let icon: String
     let title: String
-    let action: () -> Void
+    var titleColor: Color = .primaryText
+    var iconColor: Color = .primaryText
+    let onTap: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button(action: onTap) {
             HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(color.opacity(0.15))
-                        .frame(width: 34, height: 34)
-                    Image(systemName: sfSymbol)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(color)
-                }
+                Image(systemName: icon)
+                    .font(.system(size: 18, weight: .regular))
+                    .foregroundStyle(iconColor)
+                    .frame(width: 22)
 
                 Text(title)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(.primaryText)
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundStyle(titleColor)
 
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.tertiaryText.opacity(0.6))
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.tertiaryText.opacity(0.6))
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
         }
         .buttonStyle(.plain)
     }
 }
 
-// MARK: - Logout Button
+private struct ProfileToggleRow: View {
 
-private struct LogoutButton: View {
-
-    let action: () -> Void
+    let icon: String
+    let title: String
+    @Binding var isOn: Bool
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Spacer()
-                Image(systemName: "rectangle.portrait.and.arrow.right")
-                    .font(.system(size: 15, weight: .semibold))
-                Text("Выйти из аккаунта")
-                    .font(.system(size: 15, weight: .semibold))
-                Spacer()
-            }
-            .foregroundStyle(.red)
-            .padding(.vertical, 15)
-            .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 3)
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .regular))
+                .foregroundStyle(Color.primaryText)
+                .frame(width: 22)
+
+            Text(title)
+                .font(.system(size: 15, weight: .regular))
+                .foregroundStyle(Color.primaryText)
+
+            Spacer()
+
+            Toggle("", isOn: $isOn)
+                .labelsHidden()
+                .tint(Color.linkPrimary)
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 }
 
 // MARK: - Preview
 
-#Preview("Profile View") {
+#Preview("Profile") {
     ProfileView()
         .environmentObject(Router<AppRoute>())
-}
-
-#Preview("Profile View - Dark") {
-    ProfileView()
-        .environmentObject(Router<AppRoute>())
-        .preferredColorScheme(.dark)
 }

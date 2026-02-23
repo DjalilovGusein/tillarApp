@@ -123,6 +123,24 @@ struct SignInView: View {
 
                 // MARK: – Social Buttons
                 VStack(spacing: 12) {
+                    
+                    Button {
+                        // Google sign in
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "envelope")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 20, height: 20)
+                            Text("Зарегестрироваться по почте")
+                                .font(.system(size: 15, weight: .medium))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                    }
+                    .buttonStyle(OutlinedButtonStyle())
+                    .padding(.horizontal, 16)
+                    
                     Button {
                         // Google sign in
                     } label: {
