@@ -721,19 +721,6 @@ private struct LessonCard: View {
     }
 }
 
-// MARK: - Other tabs (placeholders)
-
-struct ChatView: View {
-    var body: some View {
-        ZStack {
-            Color.background.ignoresSafeArea()
-            Text("Чат")
-                .font(.title2.weight(.bold))
-                .foregroundStyle(.primaryText)
-        }
-    }
-}
-
 // MARK: - Preview
 
 #Preview("Home View") {
@@ -743,8 +730,4 @@ struct ChatView: View {
 #Preview("Home View - Dark") {
     HomeView()
         .preferredColorScheme(.dark)
-}
-
-#Preview("Chat View") {
-    ChatView()
 }
