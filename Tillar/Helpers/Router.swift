@@ -18,6 +18,7 @@ final class Router<Route: Hashable>: ObservableObject {
 
 enum AppRoute: Hashable {
     case signIn
+    case signUp
     case createAccount
     case forgotPassword
     case resetPassword
@@ -62,6 +63,8 @@ struct AppRootView: View {
                 ResetPasswordView()
             case .tabBar:
                 TabBarRootView()
+            case .signUp:
+                SignUpView()
             }
         }
     }

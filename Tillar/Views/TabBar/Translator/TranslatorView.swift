@@ -10,6 +10,10 @@ import SwiftUI
 struct TranslatorView: View {
     @State private var inputText: String = ""
     @StateObject private var vm = HomeViewModel()
+    @StateObject private var translateVM = TranslatorViewModel()
+    @EnvironmentObject private var tabBarVM: TabBarViewModel
+    @State private var fromLanguage: TranslateLanguage = .english
+    @State private var toLanguage: TranslateLanguage = .russian
 
     var body: some View {
         ZStack {
@@ -21,7 +25,7 @@ struct TranslatorView: View {
                     HeaderView(
                         mode: vm.mode,
                         onNotificationTap: vm.openNotifications,
-                        onBack: vm.closeNotifications
+                        onBack: vm.closeNotifications, tabBarVM: tabBarVM
                     )
                     .padding(.top, -200)
                     
@@ -50,23 +54,56 @@ struct TranslatorView: View {
 
     private var languagePicker: some View {
         HStack(spacing: 14) {
-            Menu("English") { }
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(Color.blue)
 
-            Image(systemName: "arrow.left.arrow.right")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(Color.blue)
+            Menu {
+                ForEach(TranslateLanguage.allCases) { lang in
+                    Button {
+                        fromLanguage = lang
+                    } label: {
+                        Label(lang.rawValue,
+                              systemImage: fromLanguage == lang ? "checkmark" : "")
+                    }
+                }
+            } label: {
+                Text(fromLanguage.rawValue)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Color.blue)
+            }
 
-            Menu("Russian") { }
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(Color.blue)
+            Button {
+                swapLanguages()
+            } label: {
+                Image(systemName: "arrow.left.arrow.right")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Color.blue)
+            }
+
+            Menu {
+                ForEach(TranslateLanguage.allCases) { lang in
+                    Button {
+                        toLanguage = lang
+                    } label: {
+                        Label(lang.rawValue,
+                              systemImage: toLanguage == lang ? "checkmark" : "")
+                    }
+                }
+            } label: {
+                Text(toLanguage.rawValue)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Color.blue)
+            }
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 12)
         .background(Color.primaryObject)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 3)
+    }
+    
+    private func swapLanguages() {
+        let temp = fromLanguage
+        fromLanguage = toLanguage
+        toLanguage = temp
     }
 
     private var inputCard: some View {
@@ -75,6 +112,9 @@ struct TranslatorView: View {
                 TextField("Нажмите, чтобы ввести текст", text: $inputText, axis: .vertical)
                     .font(.system(size: 17, weight: .regular))
                     .lineLimit(4...6)
+                    .onSubmit {
+                        translateVM.translate(text: inputText, source: fromLanguage.rawValue.prefix(2).lowercased(), reciepient: toLanguage.rawValue.prefix(2).lowercased())
+                    }
 
                 Spacer()
 
@@ -131,8 +171,10 @@ private struct TranslationResultCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 4)
     }
+    
+    
 }
 
 #Preview {
-    TranslatorView()
+    TranslatorView().environmentObject(TabBarViewModel())
 }

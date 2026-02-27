@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "statusFree.pdf",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

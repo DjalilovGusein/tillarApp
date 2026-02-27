@@ -20,6 +20,7 @@ struct HomeView: View {
     ]
 
     @StateObject private var vm = HomeViewModel()
+    @EnvironmentObject private var tabBarVM: TabBarViewModel
 
     var body: some View {
         ZStack {
@@ -31,7 +32,7 @@ struct HomeView: View {
                     HeaderView(
                         mode: vm.mode,
                         onNotificationTap: vm.openNotifications,
-                        onBack: vm.closeNotifications
+                        onBack: vm.closeNotifications, tabBarVM: tabBarVM
                     )
                     .padding(.top, -200)
 
@@ -53,7 +54,7 @@ struct HomeView: View {
 
             if vm.mode == .home {
                 FloatingActionButton {
-                    // TODO: Add action
+                    tabBarVM.getSubscriptionInfo()
                 }
             }
         }
@@ -330,6 +331,7 @@ struct HeaderView: View {
     let mode: HomeMode
     let onNotificationTap: () -> Void
     let onBack: () -> Void
+    @ObservedObject var tabBarVM: TabBarViewModel
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -343,14 +345,14 @@ struct HeaderView: View {
 
                 HStack(alignment: .bottom) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Bekzod.O")
+                        Text("\(tabBarVM.user?.user?.firstName ?? "") \(tabBarVM.user?.user?.lastName?.prefix(1).uppercased() ?? "").")
                             .font(.system(size: 28, weight: .bold))
                             .foregroundStyle(.white)
 
                         HStack(spacing: 8) {
                             Image("coin").frame(width: 18, height: 18)
 
-                            Text("4326")
+                            Text("\(tabBarVM.coins?.data?.first?.amount ?? 0)")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundStyle(.white.opacity(0.9))
                         }
@@ -725,9 +727,11 @@ private struct LessonCard: View {
 
 #Preview("Home View") {
     HomeView()
+        .environmentObject(TabBarViewModel())
 }
 
 #Preview("Home View - Dark") {
     HomeView()
+        .environmentObject(TabBarViewModel())
         .preferredColorScheme(.dark)
 }

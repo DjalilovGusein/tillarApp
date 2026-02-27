@@ -18,6 +18,22 @@ struct APISuccessMessage: Decodable {
     let message: String?
 }
 
+
+
+struct translateRequest: Codable {
+    let text: String,
+        targetLanguage: String,
+        sourceLanguage: String
+}
+
+struct translateResponse: Codable {
+    let translatedText: String,
+        detectedSourceLanguage: String,
+        targetLanguage: String,
+        originalText: String
+    
+}
+
 // MARK: - Auth
 
 struct RegisterRequest: Encodable {
@@ -59,6 +75,7 @@ struct AuthUser: Decodable {
 struct RegisterResponse: Decodable {
     let success: Bool?
     let message: String?
+    let error: String?
     let emailVerificationRequired: Bool?
     let emailVerificationSent: Bool?
     let user: AuthUser?
@@ -202,5 +219,94 @@ struct AnyCodable: Codable {
         default:
             try c.encodeNil()
         }
+    }
+}
+
+struct CoursesResponse: Codable {
+    let success: Bool
+    let overall: Overall
+    let courses: [Course]
+}
+
+// MARK: - Overall
+struct Overall: Codable {
+    let averageGrade: Double
+    let totalCourses: Int
+    let activeCourses: Int
+    let completedCourses: Int
+    let averageCompletion: Int
+    let totalUnitsComplete: Int
+    let totalUnits: Int
+    let certificatesEarned: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case averageGrade = "average_grade"
+        case totalCourses = "total_courses"
+        case activeCourses = "active_courses"
+        case completedCourses = "completed_courses"
+        case averageCompletion = "average_completion"
+        case totalUnitsComplete = "total_units_complete"
+        case totalUnits = "total_units"
+        case certificatesEarned = "certificates_earned"
+    }
+}
+
+// MARK: - Course
+struct Course: Codable {
+    let courseID: String
+    let courseName: String
+    let grade: Double
+    let completionPercent: Int
+    let unitsComplete: Int
+    let unitsTotal: Int
+    let certificateStatus: String?
+    let enrollmentMode: String
+    
+    enum CodingKeys: String, CodingKey {
+        case courseID = "course_id"
+        case courseName = "course_name"
+        case grade
+        case completionPercent = "completion_percent"
+        case unitsComplete = "units_complete"
+        case unitsTotal = "units_total"
+        case certificateStatus = "certificate_status"
+        case enrollmentMode = "enrollment_mode"
+    }
+}
+
+struct СategoriesResponse: Codable {
+    let next: String?
+    let previous: String?
+    let count: Int
+    let numPages: Int
+    let currentPage: Int
+    let start: Int
+    let results: [Subject]
+    
+    enum CodingKeys: String, CodingKey {
+        case next
+        case previous
+        case count
+        case numPages = "num_pages"
+        case currentPage = "current_page"
+        case start
+        case results
+    }
+}
+
+// MARK: - Subject (Result Item)
+struct Subject: Codable {
+    let id: Int
+    let name: String
+    let slug: String
+    let description: String
+    let testCount: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case slug
+        case description
+        case testCount = "test_count"
     }
 }

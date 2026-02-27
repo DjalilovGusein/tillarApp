@@ -39,7 +39,7 @@ final class APIManager {
     static let shared = APIManager()
 
     // host без завершающего "/"
-    private let baseURL = "https://local.openedx.io:8000"
+    private let baseURL = "http://local.openedx.io:8000"
 
     private let decoder: JSONDecoder = {
         let d = JSONDecoder()
@@ -52,12 +52,19 @@ final class APIManager {
         e.keyEncodingStrategy = .convertToSnakeCase
         return e
     }()
+    
+    private let staticHost = "local.openedx.io"
+    private let staticIP   = "172.20.20.32"
 
-    private let session: Session = {
+    private lazy var session: Session = {
         let cfg = URLSessionConfiguration.af.default
         cfg.timeoutIntervalForRequest = 30
         cfg.httpCookieStorage = .shared
-        return Session(configuration: cfg)
+        
+        let interceptor = StaticDNSInterceptor(host: self.staticHost,
+                                               ip: self.staticIP)
+        
+        return Session(configuration: cfg, interceptor: interceptor)
     }()
 
     private init() {}
@@ -69,22 +76,20 @@ final class APIManager {
 
     // MARK: - Headers
 
-    private func headers(needsAuth: Bool, needsCSRF: Bool) -> HTTPHeaders {
+    private func headers(needsAuth: Bool) -> HTTPHeaders {
         var h: HTTPHeaders = ["Content-Type": "application/json"]
 
         if needsAuth, !UD.accessToken.isEmpty {
             h.add(.authorization(bearerToken: UD.accessToken))
         }
 
-        // Postman: X-CSRFToken, токен в cookie "csrftoken" :contentReference[oaicite:0]{index=0}
-        if needsCSRF {
-            syncCSRFFromCookies(domainContains: URL(string: baseURL)?.host ?? "")
-            if !UD.csrfToken.isEmpty {
-                h.add(name: "X-CSRFToken", value: UD.csrfToken)
-            }
-        }
-
         return h
+    }
+
+    private func buildCookieHeader() -> String {
+        let cookies = HTTPCookieStorage.shared.cookies ?? []
+        let relevant = cookies.filter { $0.domain == staticIP }
+        return relevant.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
     }
 
     // MARK: - Generic request with retry
@@ -96,7 +101,6 @@ final class APIManager {
         method: HTTPMethod = .get,
         parameters: Parameters? = nil,
         needsAuth: Bool = true,
-        needsCSRF: Bool = false,
         completion: @escaping Completion<T>
     ) {
         requestWithRetry(
@@ -104,7 +108,6 @@ final class APIManager {
             method: method,
             parameters: parameters,
             needsAuth: needsAuth,
-            needsCSRF: needsCSRF,
             retryCount: 0,
             completion: completion
         )
@@ -115,14 +118,19 @@ final class APIManager {
         method: HTTPMethod,
         parameters: Parameters?,
         needsAuth: Bool,
-        needsCSRF: Bool,
         retryCount: Int,
         completion: @escaping Completion<T>
     ) {
         let fullURL = baseURL + path
-        let httpHeaders = headers(needsAuth: needsAuth, needsCSRF: needsCSRF)
+        let httpHeaders = headers(needsAuth: needsAuth)
 
         debugPrint("🚀 \(method.rawValue) \(fullURL) (retry: \(retryCount))")
+        if let parameters {
+            debugPrint("➡️ Params: \(parameters)")
+        }
+        debugPrint("📤 Request Headers:")
+        httpHeaders.forEach { debugPrint("   \($0.name): \($0.value)...") }
+            
         if let parameters {
             debugPrint("➡️ Params: \(parameters)")
         }
@@ -159,7 +167,6 @@ final class APIManager {
                         method: method,
                         parameters: parameters,
                         needsAuth: needsAuth,
-                        needsCSRF: needsCSRF,
                         retryCount: retryCount + 1,
                         completion: completion
                     )
@@ -184,7 +191,6 @@ final class APIManager {
                         method: method,
                         parameters: parameters,
                         needsAuth: needsAuth,
-                        needsCSRF: needsCSRF,
                         retryCount: retryCount + 1,
                         completion: completion
                     )
@@ -196,7 +202,8 @@ final class APIManager {
             switch response.result {
             case .success(let data):
                 // если statusCode плохой — вернем mapped error + покажем msg из ErrorResponse
-                if let status, !(200...299).contains(status) {
+                debugPrint("status is \(status)")
+                if let status, !(200...400).contains(status) {
                     if let msg = self.extractBackendMessage(from: data) {
                         self.onShowMessage?(msg)
                         completion(.failure(.backend(message: msg)))
@@ -246,34 +253,6 @@ final class APIManager {
     }
 }
 
-// MARK: - CSRF
-
-extension APIManager {
-
-    /// В Postman перед логином/регистрацией сначала дергают /api/keycloak/csrf/ :contentReference[oaicite:1]{index=1}
-    func getCSRFToken(completion: @escaping Completion<APISuccessMessage>) {
-        request(
-            "/api/keycloak/csrf/",
-            method: .get,
-            parameters: nil,
-            needsAuth: false,
-            needsCSRF: false
-        ) { [weak self] (result: Result<APISuccessMessage, NetworkError>) in
-            self?.syncCSRFFromCookies(domainContains: URL(string: self?.baseURL ?? "")?.host ?? "")
-            completion(result)
-        }
-    }
-
-    func syncCSRFFromCookies(domainContains: String) {
-        let cookies = HTTPCookieStorage.shared.cookies ?? []
-        if let csrf = cookies.first(where: {
-            $0.name.lowercased() == "csrftoken" && $0.domain.contains(domainContains)
-        }) {
-            UD.csrfToken = csrf.value
-        }
-    }
-}
-
 // MARK: - Auth endpoints
 
 extension APIManager {
@@ -284,7 +263,6 @@ extension APIManager {
             method: .post,
             parameters: req.dictionary(using: encoder),
             needsAuth: false,
-            needsCSRF: true,
             completion: completion
         )
     }
@@ -295,7 +273,6 @@ extension APIManager {
             method: .post,
             parameters: req.dictionary(using: encoder),
             needsAuth: false,
-            needsCSRF: true,
             completion: completion
         )
     }
@@ -306,10 +283,40 @@ extension APIManager {
             method: .get,
             parameters: nil,
             needsAuth: true,
-            needsCSRF: false,
             completion: completion
         )
     }
+    
+    func getUserProgress(completion: @escaping Completion<CoursesResponse>) {
+        request(
+            "/api/tillar/user-progress/",
+            method: .get,
+            parameters: nil,
+            needsAuth: true,
+            completion: completion
+        )
+    }
+    
+    func getCategories(completion: @escaping Completion<СategoriesResponse>) {
+        request(
+            "/api/level-assessment/categories/",
+            method: .get,
+            parameters: nil,
+            needsAuth: true,
+            completion: completion
+        )
+    }
+    
+    func translate(_ req: translateRequest, completion: @escaping Completion<translateResponse>) {
+        request(
+            "/api/v1/translate",
+            method: .post,
+            parameters: req.dictionary(using: encoder),
+            needsAuth: false,
+            completion: completion
+        )
+    }
+    
 
     func logout(completion: @escaping Completion<APISuccessMessage>) {
         request(
@@ -317,7 +324,6 @@ extension APIManager {
             method: .post,
             parameters: nil,
             needsAuth: true,
-            needsCSRF: true,
             completion: completion
         )
     }
@@ -338,7 +344,6 @@ extension APIManager {
             method: .post,
             parameters: body.dictionary(using: encoder),
             needsAuth: true,
-            needsCSRF: true
         ) { [weak self] (result: Result<RefreshResponse, NetworkError>) in
             guard let self else { completion(false); return }
 
@@ -347,7 +352,6 @@ extension APIManager {
                 if let tokens = resp.tokens {
                     UD.accessToken = tokens.accessToken ?? ""
                     UD.refreshToken = tokens.refreshToken ?? UD.refreshToken
-                    self.syncCSRFFromCookies(domainContains: URL(string: self.baseURL)?.host ?? "")
                     completion(!UD.accessToken.isEmpty)
                 } else {
                     completion(false)
@@ -373,7 +377,6 @@ extension APIManager {
             method: .post,
             parameters: req.dictionary(using: encoder),
             needsAuth: true,
-            needsCSRF: true,
             completion: completion
         )
     }
@@ -411,6 +414,28 @@ extension APIManager {
         )
         microserviceProxy(req, completion: completion)
     }
+    
+    func getNotifications(completion: @escaping Completion<AIBotResponse>) {
+        let req = MicroserviceProxyRequest(
+            service: "notifications",
+            method: "GET",
+            endpoint: "/api/v1/notification",
+            userId: true,
+            data: nil
+        )
+        microserviceProxy(req, completion: completion)
+    }
+    
+    func getSubscriptionInfo(completion: @escaping Completion<AIBotResponse>) {
+        let req = MicroserviceProxyRequest(
+            service: "subscriptions",
+            method: "GET",
+            endpoint: "/api/subscriptions-info",
+            userId: false,
+            data: nil
+        )
+        microserviceProxy(req, completion: completion)
+    }
 }
 
 // MARK: - Encodable -> Parameters
@@ -422,5 +447,86 @@ extension Encodable {
               let dict = obj as? Parameters
         else { return nil }
         return dict
+    }
+    
+    
+}
+
+
+
+final class StaticDNSInterceptor: RequestInterceptor {
+
+    private let host: String
+    private let ip: String
+
+    init(host: String, ip: String) {
+        self.host = host
+        self.ip = ip
+    }
+
+    func adapt(
+        _ urlRequest: URLRequest,
+        for session: Session,
+        completion: @escaping (Result<URLRequest, Error>) -> Void
+    ) {
+        guard let url = urlRequest.url,
+              url.host == host else {
+            completion(.success(urlRequest))
+            return
+        }
+
+        var request = urlRequest
+
+        if var components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+            components.host = ip
+            request.url = components.url
+        }
+
+        request.setValue(host, forHTTPHeaderField: "Host")
+
+        completion(.success(request))
+    }
+}
+
+final class CookieStorage {
+    static let shared = CookieStorage()
+    
+    private let defaults = UserDefaults.standard
+    private let key = "stored_cookies"
+    private let rawKey = "stored_raw_cookies"  // ← ДОБАВИТЬ
+    
+    private var cookies: [String: String] {
+        get { defaults.dictionary(forKey: key) as? [String: String] ?? [:] }
+        set { defaults.set(newValue, forKey: key) }
+    }
+    
+    // Полные строки из Set-Cookie
+    private var rawCookies: [String: String] {
+        get { defaults.dictionary(forKey: rawKey) as? [String: String] ?? [:] }
+        set { defaults.set(newValue, forKey: rawKey) }
+    }
+    
+    func save(name: String, value: String, rawSetCookie: String? = nil) {
+        var current = cookies
+        current[name] = value
+        cookies = current
+        
+        // Сохраняем полную строку
+        if let raw = rawSetCookie {
+            var currentRaw = rawCookies
+            currentRaw[name] = raw
+            rawCookies = currentRaw
+            debugPrint("🍪 Saved raw: \(raw.prefix(50))...")
+        }
+    }
+    
+    func cookieHeader() -> String {
+        // Возвращаем полные строки вместо key=value
+        rawCookies.values.joined(separator: "; ")
+    }
+    
+    func clear() {
+        cookies = [:]
+        rawCookies = [:]
     }
 }

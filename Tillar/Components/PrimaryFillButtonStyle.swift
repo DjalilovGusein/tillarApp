@@ -8,7 +8,13 @@
 import SwiftUI
 
 struct PrimaryFillButtonStyle: ButtonStyle {
-    var enabledColor: Color = Color.accentIcon
+    
+    var enabledColor: Color = .init(.sRGB,
+        red: 72.0/255.0,
+        green: 128.0/255.0,
+        blue: 188.0/255.0,
+        opacity: 1
+    )
     var disabledColor: Color = .gray.opacity(0.3)
     
     func makeBody(configuration: Configuration) -> some View {
@@ -24,19 +30,26 @@ struct PrimaryFillButtonStyle: ButtonStyle {
         let disabledColor: Color
         
         var body: some View {
-            let fill = isEnabled
-            ? (configuration.isPressed ? enabledColor.opacity(0.85) : enabledColor)
-            : disabledColor
+            
+            let fill: Color = {
+                if !isEnabled {
+                    return disabledColor
+                }
+                return configuration.isPressed
+                ? enabledColor.opacity(0.85)
+                : enabledColor
+            }()
             
             configuration.label
                 .frame(maxWidth: .infinity)
-                .frame(height: 52)                       // ← размер только здесь
-                .background(RoundedRectangle(cornerRadius: 12).fill(fill))
+                .frame(height: 52)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(fill)
+                )
                 .foregroundStyle(.white.opacity(isEnabled ? 1 : 0.7))
                 .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
                 .animation(.easeOut(duration: 0.15), value: isEnabled)
         }
     }
 }
-    
-

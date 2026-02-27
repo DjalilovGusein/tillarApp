@@ -1,11 +1,19 @@
+//
+//  TabBarRootView.swift
+//  Tillar
+//
+//  Created by Gusein Djalilov on 06/01/26.
+//
+
 import SwiftUI
+
 
 struct TabBarRootView: View {
     @State private var selection: AppTab = .home
+    @StateObject private var viewModel = TabBarViewModel()
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-
+        ZStack {
             Group {
                 switch selection {
                 case .home:
@@ -20,10 +28,18 @@ struct TabBarRootView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                CustomTabBar(selection: $selection)
+            VStack {
+                Spacer()
+                CustomTabBar(selection: $selection) {
+                    // onCenterTap
+                }
             }
         }
+        .onAppear(perform: {
+            viewModel.loadUserInfo()
+        })
+        .environmentObject(viewModel)
+        .toolbar(.hidden, for: .navigationBar)
         .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 }

@@ -88,6 +88,7 @@ struct SignInView: View {
 
                 // MARK: – Login Button
                 Button {
+                  //  router.push(.tabBar)
                     viewModel.login(username: login, password: password) {
                         router.push(.tabBar)
                     }
@@ -125,7 +126,7 @@ struct SignInView: View {
                 VStack(spacing: 12) {
                     
                     Button {
-                        // Google sign in
+                        router.push(.signUp)
                     } label: {
                         HStack(spacing: 10) {
                             Image(systemName: "envelope")
@@ -182,7 +183,7 @@ struct SignInView: View {
                         .font(.system(size: 14))
                         .foregroundStyle(Color.tertiaryText)
                     Button {
-                        router.push(.createAccount)
+                        router.push(.signUp)
                     } label: {
                         Text("Зарегистрироваться")
                             .font(.system(size: 14, weight: .semibold))

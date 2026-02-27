@@ -18,21 +18,61 @@ final class AuthViewModel: ObservableObject {
     func login(username: String, password: String, completion: @escaping(() -> ())) {
         isLoading = true
         errorText = nil
-
+        
         APIManager.shared.login(.init(username: username, password: password)) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.isLoading = false
-
+                
                 switch result {
                 case .success(let resp):
-                    if let tokens = resp.tokens {
-                        UD.accessToken = tokens.accessToken ?? ""
-                        UD.refreshToken = tokens.refreshToken ?? ""
+                    if resp.success == false {
+                        self.errorText = resp.message ?? ""
+                    } else {
+                        if let tokens = resp.tokens {
+                            UD.accessToken = tokens.accessToken ?? ""
+                            UD.refreshToken = tokens.refreshToken ?? ""
+                            debugPrint("💾 Tokens saved. Access: \(UD.accessToken.prefix(30))...")
+                        }
+                        
+                        completion()
+                        
                     }
-                   // self.user = resp.user
-                    completion()
-
+                    
+                case .failure(let err):
+                    self.errorText = err.localizedDescription
+                }
+            }
+        }
+    }
+    
+    func register(username: String,
+                  password: String,
+                  email: String,
+                  firstName: String,
+                  lastName: String,
+                  completion: @escaping((RegisterResponse) -> ())) {
+        
+        isLoading = true
+        errorText = nil
+        APIManager.shared.register(RegisterRequest(username: username, email: email, password: password, firstName: firstName, lastName: lastName)) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.isLoading = false
+                
+                switch result {
+                case .success(let resp):
+                    if resp.success ?? true {
+                        if let tokens = resp.tokens {
+                            UD.accessToken = tokens.accessToken ?? ""
+                            UD.refreshToken = tokens.refreshToken ?? ""
+                        }
+                        completion(resp)
+                    } else {
+                        self.errorText = resp.error ?? ""
+                    }
+                    
+                    
                 case .failure(let err):
                     self.errorText = err.localizedDescription
                 }

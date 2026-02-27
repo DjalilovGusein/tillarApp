@@ -10,6 +10,7 @@ import SwiftUI
 struct ProfileView: View {
 
     @StateObject private var vm = ProfileViewModel()
+    @EnvironmentObject private var tabBarVM: TabBarViewModel
     @EnvironmentObject private var router: Router<AppRoute>
 
     @AppStorage("tillar_dark_mode") private var isDarkMode: Bool = false
@@ -22,22 +23,25 @@ struct ProfileView: View {
                 VStack(spacing: 14) {
 
                     ProfileWaveHeaderView(
-                        initials: vm.initials,
-                        coins: "4326"
+                        initials: "\(tabBarVM.user?.user?.firstName ?? "") \(tabBarVM.user?.user?.lastName?.prefix(1) ?? "").",
+                        coins: "\(tabBarVM.coins?.data?.first?.amount ?? 0)"
                     )
                     .padding(.top, -90)
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(vm.displayName)
-                                .font(.system(size: 20, weight: .semibold))
-                                .foregroundStyle(.primaryText)
-                                .lineLimit(1)
-                            
-                            Text(vm.user?.email ?? "@codilboyev_")
+                            HStack {
+                                Text(vm.displayName)
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundStyle(.primaryText)
+                                    .lineLimit(1)
+                                Image("statusFree")
+                                    .padding(.leading, -5)
+                            }
+                            Text(tabBarVM.user?.user?.email ?? "")
                                 .font(.system(size: 12, weight: .regular))
                                 .foregroundStyle(.tertiaryText)
                                 .lineLimit(1)
-                        }.padding(.leading, 8)
+                        }.padding(.leading, 16)
                         Spacer()
                         Button(action: {
                             
@@ -196,23 +200,17 @@ private struct ProfileWaveHeaderView: View {
         let coins: String
 
         var body: some View {
-            HStack(spacing: 8) {
-                ZStack {
-                    Circle().fill(Color.yellow.opacity(0.95))
-                    Text("tll")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.black.opacity(0.85))
-                }
-                .frame(width: 22, height: 22)
+            HStack() {
+                Image("coin")
+                    .frame(width: 30, height: 30)
 
                 Text(coins)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.white)
+                    .padding(.leading, -10)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(Color.black.opacity(0.28))
-            .clipShape(Capsule())
         }
     }
 
@@ -222,8 +220,8 @@ private struct ProfileWaveHeaderView: View {
         var body: some View {
             ZStack {
                 Circle()
-                    .fill(Color.gray)
-                Text(initials.isEmpty ? "R" : initials)
+                    .fill(.blue)
+                Text(initials.isEmpty ? "R" : initials.prefix(1))
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(.primaryText)
             }
@@ -377,5 +375,6 @@ private struct ProfileToggleRow: View {
 
 #Preview("Profile") {
     ProfileView()
+        .environmentObject(TabBarViewModel())
         .environmentObject(Router<AppRoute>())
 }

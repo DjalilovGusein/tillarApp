@@ -20,13 +20,11 @@ struct ChatView: View {
         ZStack(alignment: .top) {
             Color(.systemGroupedBackground).ignoresSafeArea()
             VStack {
-                ScrollView(.vertical, showsIndicators: false) {
                     header
                         .frame(height: headerHeight)
                         .ignoresSafeArea(edges: .top)
                     contentCard
-                        .padding(.top,) // overlaps like on screenshot
-                }.padding(.top, -50)
+                        .padding(.top,)
             }
         }
         .fullScreenCover(isPresented: $showDetail) {
@@ -177,7 +175,7 @@ private extension ChatView {
 private extension ChatView {
 
     var contentCard: some View {
-        VStack(spacing: 0) {
+        ScrollView(.vertical, showsIndicators: false) {
             
             LazyVStack(spacing: 0) {
                 ForEach(vm.filteredConversations) { conversation in
@@ -195,11 +193,13 @@ private extension ChatView {
         }
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.white)
+                .fill(Color.background)
         )
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .shadow(color: .black.opacity(0.05), radius: 14, x: 0, y: -2)
         .padding(.horizontal, 0)
+        .padding(.vertical, -60)
+        
     }
 }
 
@@ -217,14 +217,14 @@ private struct ConversationRowLikeScreenshot: View {
                 HStack {
                     Text(conversation.name)
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Color.black.opacity(0.9))
+                        .foregroundStyle(Color.primaryText.opacity(0.9))
                         .lineLimit(1)
 
                     Spacer()
 
                     Text(conversation.time)
                         .font(.system(size: 12, weight: .regular))
-                        .foregroundStyle(Color.black.opacity(0.35))
+                        .foregroundStyle(Color.primaryText.opacity(0.35))
                 }
 
                 HStack(spacing: 6) {
@@ -237,7 +237,7 @@ private struct ConversationRowLikeScreenshot: View {
 
                     Text(conversation.lastMessage)
                         .font(.system(size: 14, weight: .regular))
-                        .foregroundStyle(Color.black.opacity(0.45))
+                        .foregroundStyle(Color.primaryText.opacity(0.45))
                         .lineLimit(1)
 
                     Spacer()
@@ -336,5 +336,5 @@ private struct RoundedCorner: Shape {
 // MARK: - Preview
 
 #Preview("Chat List (Like Screenshot)") {
-    ChatView()
+    ChatView().environmentObject(TabBarViewModel())
 }
