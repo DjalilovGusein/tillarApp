@@ -321,3 +321,4 @@ private struct BackgroundGradient: View {
         onBack: {}
     )
 }
+

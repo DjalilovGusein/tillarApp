@@ -27,11 +27,16 @@ struct translateRequest: Codable {
 }
 
 struct translateResponse: Codable {
-    let translatedText: String,
-        detectedSourceLanguage: String,
-        targetLanguage: String,
-        originalText: String
-    
+    let success: Bool?
+    let data: translateDataStream?
+    let status: Int?
+}
+
+struct translateDataStream: Codable {
+    let translatedText: String?,
+        detectedSourceLanguage: String?,
+        targetLanguage: String?,
+        originalText: String?
 }
 
 // MARK: - Auth
@@ -253,7 +258,7 @@ struct Overall: Codable {
 
 // MARK: - Course
 struct Course: Codable {
-    let courseID: String
+    let course_id: String
     let courseName: String
     let grade: Double
     let completionPercent: Int
@@ -263,15 +268,27 @@ struct Course: Codable {
     let enrollmentMode: String
     
     enum CodingKeys: String, CodingKey {
-        case courseID = "course_id"
         case courseName = "course_name"
         case grade
+        case course_id = "course_id"
         case completionPercent = "completion_percent"
         case unitsComplete = "units_complete"
         case unitsTotal = "units_total"
         case certificateStatus = "certificate_status"
         case enrollmentMode = "enrollment_mode"
     }
+}
+
+struct FrazesResponse: Codable {
+    let success: Bool?
+    let status: Int?
+    let data: [Fraze]?
+}
+
+struct Fraze: Codable {
+    let id: Int?
+    let name: String?
+    let iconUrl: String?
 }
 
 struct СategoriesResponse: Codable {
@@ -309,4 +326,109 @@ struct Subject: Codable {
         case description
         case testCount = "test_count"
     }
+}
+
+struct Lessons: Codable {
+    let results: [ResultLessons]
+    let pagination: Paginations
+}
+
+struct Paginations: Codable {
+    let next: String?
+    let previous: String?
+    let count: Int?
+    let numPages: Int?
+}
+
+struct ResultLessons: Codable {
+    let blocksURL: String?
+    let effort: String?
+    let end: String?
+    let enrollmentStart: String?
+    let enrollmentEnd: String?
+    let id: String?
+    let media: Media?
+    let name: String?
+    let number: String?
+    let org: String?
+    let shortDescription: String?
+    let start: String?
+    let startDisplay: String?
+    let startType: String?
+    let pacing: String?
+    let mobileAvailable: Bool?
+    let hidden: Bool?
+    let invitationOnly: Bool?
+    let firstLessonURL: String?
+    let courseID: String?
+}
+
+struct Media: Codable {
+    let bannerImage: BannerImage?
+    let courseImage: Courses?
+    let courseVideo: Courses?
+    let image: ImageLessons?
+}
+
+struct BannerImage: Codable {
+    let uri: String?
+    let uriAbsolute: String?
+}
+
+struct Courses: Codable {
+    let uri: String?
+}
+
+struct ImageLessons: Codable {
+    let raw: String?
+    let small: String?
+    let large: String?
+}
+
+
+struct CourseDetailsResponse: Codable {
+    let blocks: [String: Block]?
+}
+
+// MARK: - Block
+struct Block: Codable {
+    var id: String { _id ?? UUID().uuidString }
+    private let _id: String?
+    let children: [String]?
+    let complete: Bool?
+    let description: String?
+    let displayName: String?
+    let due: String?
+    let effortActivities: Int?
+    let effortTime: Int?
+    let icon: String?
+    let lmsWebUrl: String?
+    let resumeBlock: Bool?
+    let type: String?
+    let hasScheduledContent: Bool?
+    let hideFromToc: Bool?
+    let isLocked: Bool?
+    let completionStat: CompletionStat?
+    let tags: [Tag]?
+    let thumbnail: String?
+    
+    enum CodingKeys: String, CodingKey {
+            case _id = "id"
+            case children, complete, description, displayName, due,
+                 effortActivities, effortTime, icon, lmsWebUrl,
+                 resumeBlock, type, hasScheduledContent, hideFromToc,
+                 isLocked, completionStat, tags, thumbnail
+        }
+}
+
+// MARK: - CompletionStat
+struct CompletionStat: Codable {
+    let completion: Int?
+    let completableChildren: Int?
+}
+
+// MARK: - Tag
+struct Tag: Codable {
+    let taxonomy: String?
+    let value: String?
 }

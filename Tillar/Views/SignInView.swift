@@ -88,9 +88,10 @@ struct SignInView: View {
 
                 // MARK: – Login Button
                 Button {
-                  //  router.push(.tabBar)
+                    router.push(.phone)
                     viewModel.login(username: login, password: password) {
-                        router.push(.tabBar)
+                        router.push(.phone)
+                       // router.push(.tabBar)
                     }
                 } label: {
                     if viewModel.isLoading {

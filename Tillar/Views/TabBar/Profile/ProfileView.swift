@@ -13,7 +13,13 @@ struct ProfileView: View {
     @EnvironmentObject private var tabBarVM: TabBarViewModel
     @EnvironmentObject private var router: Router<AppRoute>
 
-    @AppStorage("tillar_dark_mode") private var isDarkMode: Bool = false
+    @AppStorage("tillar_theme") private var themeRaw: String = AppTheme.light.rawValue
+    private var isDarkBinding: Binding<Bool> {
+        Binding(
+            get: { (AppTheme(rawValue: themeRaw) ?? .light) == .dark },
+            set: { themeRaw = $0 ? AppTheme.dark.rawValue : AppTheme.light.rawValue }
+        )
+    }
 
     var body: some View {
         ZStack {
@@ -48,10 +54,10 @@ struct ProfileView: View {
                         }) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .fill(Color.white)
+                                    .fill(Color.primaryObject)
                                     .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 3)
                                 
-                                Image(systemName: "pencil")
+                                Image("pencil")
                                     .font(.system(size: 16, weight: .semibold))
                                     .foregroundStyle(Color.primaryText)
                             }
@@ -60,7 +66,7 @@ struct ProfileView: View {
                         .buttonStyle(.plain)
                         .padding(.trailing, 16)
                     }
-
+                    /*
                     ProBannerView(
                         title: "Подписка PRO",
                         subtitle: "Выберите один из трех тарифов.",
@@ -70,17 +76,17 @@ struct ProfileView: View {
                         }
                     )
                     .padding(.horizontal, 16)
-
+                     */
                     ProfileMenuCard {
                         ProfileMenuRow(
-                            icon: "book.closed",
+                            icon: "book",
                             title: "Мои уроки",
                             onTap: { /* TODO */ }
                         )
                         DividerInset()
 
                         ProfileMenuRow(
-                            icon: "chart.xyaxis.line",
+                            icon: "progress",
                             title: "Мой прогресс",
                             onTap: { /* TODO */ }
                         )
@@ -94,37 +100,37 @@ struct ProfileView: View {
                         DividerInset()
 
                         ProfileMenuRow(
-                            icon: "cart",
+                            icon: "shop",
                             title: "Магазин",
                             onTap: { /* TODO */ }
                         )
                         DividerInset()
 
                         ProfileToggleRow(
-                            icon: "moon",
+                            icon: "themeIcon",
                             title: "Темный режим",
-                            isOn: $isDarkMode
+                            isOn: isDarkBinding
                         )
                     }
                     .padding(.horizontal, 16)
 
                     ProfileMenuCard {
                         ProfileMenuRow(
-                            icon: "creditcard",
+                            icon: "card",
                             title: "Оплата",
                             onTap: { /* TODO */ }
                         )
                         DividerInset()
 
                         ProfileMenuRow(
-                            icon: "headphones",
+                            icon: "support",
                             title: "Служба Поддержки",
                             onTap: { /* TODO */ }
                         )
                         DividerInset()
 
                         ProfileMenuRow(
-                            icon: "rectangle.portrait.and.arrow.right",
+                            icon: "exit",
                             title: "Выйти",
                             titleColor: .red,
                             iconColor: .red,
@@ -297,7 +303,7 @@ private struct ProfileMenuCard<Content: View>: View {
         VStack(spacing: 0) {
             content
         }
-        .background(Color.white)
+        .background(Color.primaryObject)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 4)
     }
@@ -321,7 +327,7 @@ private struct ProfileMenuRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 12) {
-                Image(systemName: icon)
+                Image(icon)
                     .font(.system(size: 18, weight: .regular))
                     .foregroundStyle(iconColor)
                     .frame(width: 22)
@@ -351,7 +357,7 @@ private struct ProfileToggleRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: icon)
+            Image(icon)
                 .font(.system(size: 18, weight: .regular))
                 .foregroundStyle(Color.primaryText)
                 .frame(width: 22)

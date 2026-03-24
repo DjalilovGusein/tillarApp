@@ -28,7 +28,7 @@ struct CustomTabBar: View {
                     cornerRadius: cornerRadius,
                     notchRadius: notchRadius
                 )
-                .fill(Color.white)
+                .fill(.tabBarBackground)
                 .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: -2)
                 .frame(height: barHeight + bottomInset)   // ✅ закрываем safe area
                 .overlay(
@@ -54,13 +54,13 @@ struct CustomTabBar: View {
                 } label: {
                     ZStack {
                         Circle()
-                            .fill(Color.white)
+                            .fill(.tabBarBackground)
                             .shadow(color: .black.opacity(0.12), radius: 10, x: 0, y: 4)
 
-                        Circle()
-                            .stroke(Color.primaryIcon.opacity(0.25), lineWidth: 2)
+                      /*  Circle()
+                            .stroke(Color.white, lineWidth: 2) */
 
-                        Image(systemName: "sparkles")
+                        Image( "aiBar")
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundStyle(Color.primaryIcon)
                     }
@@ -89,11 +89,11 @@ struct CustomTabBar: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 22, height: 22)
-                    .foregroundStyle(isSelected ? Color.primaryIcon : Color.gray.opacity(0.6))
+                    .foregroundStyle(isSelected ? Color.tabBarAccent : Color.gray.opacity(0.6))
 
                 Text(tab.title)
                     .font(.caption2)
-                    .foregroundStyle(isSelected ? Color.primaryIcon : Color.gray.opacity(0.6))
+                    .foregroundStyle(isSelected ? Color.tabBarAccent : Color.gray.opacity(0.6))
             }
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())

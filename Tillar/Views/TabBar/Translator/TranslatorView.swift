@@ -34,12 +34,12 @@ struct TranslatorView: View {
                         inputCard
                         
                         TranslationResultCard(
-                            text: "Pulimni qachon qaytarib berasan?",
+                            text: "How is it going?",
                             isFavorite: true
                         )
                         
                         TranslationResultCard(
-                            text: "Pulingni baribir olomisan!",
+                            text: "Make my reservation now!",
                             isFavorite: false
                         )
                         
@@ -59,6 +59,11 @@ struct TranslatorView: View {
                 ForEach(TranslateLanguage.allCases) { lang in
                     Button {
                         fromLanguage = lang
+                        translateVM.scheduleTranslate(
+                            text: inputText,
+                            source: fromLanguage.rawValue.prefix(2).lowercased(),
+                            target: toLanguage.rawValue.prefix(2).lowercased()
+                        )
                     } label: {
                         Label(lang.rawValue,
                               systemImage: fromLanguage == lang ? "checkmark" : "")
@@ -72,6 +77,11 @@ struct TranslatorView: View {
 
             Button {
                 swapLanguages()
+                translateVM.scheduleTranslate(
+                    text: inputText,
+                    source: fromLanguage.rawValue.prefix(2).lowercased(),
+                    target: toLanguage.rawValue.prefix(2).lowercased()
+                )
             } label: {
                 Image(systemName: "arrow.left.arrow.right")
                     .font(.system(size: 18, weight: .semibold))
@@ -82,6 +92,11 @@ struct TranslatorView: View {
                 ForEach(TranslateLanguage.allCases) { lang in
                     Button {
                         toLanguage = lang
+                        translateVM.scheduleTranslate(
+                            text: inputText,
+                            source: fromLanguage.rawValue.prefix(2).lowercased(),
+                            target: toLanguage.rawValue.prefix(2).lowercased()
+                        )
                     } label: {
                         Label(lang.rawValue,
                               systemImage: toLanguage == lang ? "checkmark" : "")
@@ -112,23 +127,40 @@ struct TranslatorView: View {
                 TextField("Нажмите, чтобы ввести текст", text: $inputText, axis: .vertical)
                     .font(.system(size: 17, weight: .regular))
                     .lineLimit(4...6)
+                    .onChange(of: inputText) { newValue in
+                            translateVM.scheduleTranslate(
+                                text: newValue,
+                                source: fromLanguage.rawValue.prefix(2).lowercased(),
+                                target: toLanguage.rawValue.prefix(2).lowercased()
+                            )
+                        }
                     .onSubmit {
-                        translateVM.translate(text: inputText, source: fromLanguage.rawValue.prefix(2).lowercased(), reciepient: toLanguage.rawValue.prefix(2).lowercased())
+                        translateVM.translate(
+                            text: inputText.trimmingCharacters(in: .whitespacesAndNewlines),
+                            source: fromLanguage.rawValue.prefix(2).lowercased(),
+                            reciepient: toLanguage.rawValue.prefix(2).lowercased()
+                        )
                     }
 
                 Spacer()
-
-                Image(systemName: "speaker.wave.2.fill")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(Color.gray.opacity(0.6))
+                Button {
+                    
+                } label: {
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 26))
+                        .foregroundStyle(Color.gray.opacity(0.6))
+                }
             }
 
-            Spacer(minLength: 84)
+            Spacer(minLength: 44)
+            Text(translateVM.translate?.data?.translatedText ?? "")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(Color.primaryText)
 
             HStack {
                 Spacer()
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 26))
+                Image(systemName: "speaker.wave.2.fill")
+                    .font(.system(size: 20, weight: .medium))
                     .foregroundStyle(Color.gray.opacity(0.6))
             }
         }

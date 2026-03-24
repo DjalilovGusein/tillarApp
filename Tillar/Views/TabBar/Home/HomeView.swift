@@ -11,7 +11,7 @@ import SwiftUI
 
 struct HomeView: View {
 
-    private let categories: [CategoryItem] = [
+    let categories: [CategoryItem] = [
         .init(title: "Уроки", sfSymbol: "book.closed.fill", color: .red),
         .init(title: "Фразы", sfSymbol: "bubble.left.and.bubble.right.fill", color: .green),
         .init(title: "Слова", sfSymbol: "doc.text.fill", color: .orange),
@@ -20,6 +20,7 @@ struct HomeView: View {
     ]
 
     @StateObject private var vm = HomeViewModel()
+    @StateObject private var lessonsVM = LessonsViewModel()
     @EnvironmentObject private var tabBarVM: TabBarViewModel
 
     var body: some View {
@@ -35,14 +36,32 @@ struct HomeView: View {
                         onBack: vm.closeNotifications, tabBarVM: tabBarVM
                     )
                     .padding(.top, -200)
+                    
 
                     Group {
                         switch vm.mode {
                         case .home:
-                            HomeContent(categories: categories)
+                            HomeContent(categories: categories, onCategoryTap: {cat in
+                                switch cat.title {
+                                case "Уроки":
+                                    vm.openLessons()
+                                case "Фразы":
+                                    vm.openFrazes()
+                                default:
+                                    break
+                                }})
 
                         case .notifications:
                             NotificationsContent(vm: vm.notificationsVM, onBack: vm.closeNotifications)
+                        
+                        case .lessons:
+                            LessonsContent(vm: lessonsVM) {
+                                    vm.closeNotifications()
+                            }
+                        case .frazes:
+                            FrazesContent(vm: vm.frazesVM) {
+                                vm.mode = .home
+                                }
                         }
                     }
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
@@ -54,7 +73,7 @@ struct HomeView: View {
 
             if vm.mode == .home {
                 FloatingActionButton {
-                    tabBarVM.getSubscriptionInfo()
+                    tabBarVM.getNotificationsList()
                 }
             }
         }
@@ -97,6 +116,54 @@ private struct NotificationsContent: View {
             }
         }
         .padding(.horizontal, 16)
+    }
+}
+
+private struct LessonsContent: View {
+    
+    @ObservedObject var vm: LessonsViewModel
+    let onBack: () -> Void
+    
+    var body: some View {
+        switch vm.mode {
+        case .list:
+            LessonsListContent(vm: vm, onBack: onBack)
+            
+        case .details:
+            LessonDetailsContent(vm: vm) {
+                vm.goBackToLessons()
+            }
+        }
+    }
+    
+    
+    private var header: some View {
+        HStack {
+            Button {
+                onBack()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.black.opacity(0.85))
+                    .frame(width: 33, height: 33)
+                    .background(
+                        Circle()
+                            .fill(Color.white)
+                            .shadow(color: .black.opacity(0.10), radius: 8, x: 0, y: 4)
+                    )
+            }
+            
+            Spacer()
+            
+            Text("Уроки")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(Color.primary)
+            
+            Spacer()
+            
+            Color.clear
+                .frame(width: 33, height: 33)
+        }
     }
 }
 
@@ -148,7 +215,7 @@ private struct NotificationCell: View {
             }
         }
         .padding(14)
-        .background(Color.white)
+        .background(Color.primaryObject)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .shadow(color: .black.opacity(0.07), radius: 12, x: 0, y: 8)
     }
@@ -239,6 +306,8 @@ private struct ProgressInlineCard: View {
 private struct HomeContent: View {
 
     let categories: [CategoryItem]
+    let onCategoryTap: (CategoryItem) -> Void
+    
 
     var body: some View {
         VStack(spacing: 16) {
@@ -248,7 +317,10 @@ private struct HomeContent: View {
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.primaryText)
 
-                CategoryRow(items: categories)
+                CategoryRow(items: categories, onCategoryTap: {
+                    cat in
+                    onCategoryTap(cat)
+                })
             }
             .padding(.horizontal, 16)
 
@@ -462,14 +534,19 @@ private struct BackButton: View {
 
 // MARK: - Categories
 
-private struct CategoryRow: View {
+struct CategoryRow: View {
     let items: [CategoryItem]
+    let onCategoryTap: (CategoryItem) -> Void
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
                 ForEach(items) { item in
-                    CategoryTile(item: item)
+                    Button {
+                        onCategoryTap(item)
+                    } label: {
+                        CategoryTile(item: item)
+                    }
                 }
             }
             .padding(.vertical, 6)
@@ -477,14 +554,14 @@ private struct CategoryRow: View {
     }
 }
 
-private struct CategoryTile: View {
+struct CategoryTile: View {
     let item: CategoryItem
 
     var body: some View {
         VStack(spacing: 8) {
             ZStack {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.white)
+                    .fill(Color.primaryObject)
                     .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 6)
 
                 VStack {
@@ -504,7 +581,7 @@ private struct CategoryTile: View {
     }
 }
 
-private struct CategoryItem: Identifiable {
+struct CategoryItem: Identifiable {
     let id = UUID()
     let title: String
     let sfSymbol: String
@@ -717,7 +794,7 @@ private struct LessonCard: View {
             }
             .padding(14)
         }
-        .background(Color.white)
+        .background(Color.primaryObject)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 8)
     }

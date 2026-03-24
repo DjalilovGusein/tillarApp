@@ -38,8 +38,9 @@ final class APIManager {
 
     static let shared = APIManager()
 
-    // host без завершающего "/"
-    private let baseURL = "http://local.openedx.io:8000"
+   // private let baseURL = "http://local.openedx.io:8000"
+    private let baseURL = "http://tillar.uz/apiman"
+    private let baseURLdev = "https://tillar.uz/api-test"
 
     private let decoder: JSONDecoder = {
         let d = JSONDecoder()
@@ -287,6 +288,36 @@ extension APIManager {
         )
     }
     
+    func getCourses(completion: @escaping Completion<Lessons>) {
+        request(
+            "/api/courses/v1/courses/",
+            method: .get,
+            parameters: nil,
+            needsAuth: true,
+            completion: completion
+        )
+    }
+    
+    func getCourseDetails(id: String, completion: @escaping Completion<CourseDetailsResponse>) {
+        request(
+            "/api/course_home/navigation/\(id)",
+            method: .get,
+            parameters: nil,
+            needsAuth: true,
+            completion: completion
+        )
+    }
+    
+    func getLessonContent(id: String, completion: @escaping Completion<LessonXBlock>) {
+        request(
+            "/api/mobile/v1/xblock/\(id)",
+            method: .get,
+            parameters: nil,
+            needsAuth: true,
+            completion: completion
+        )
+    }
+    
     func getUserProgress(completion: @escaping Completion<CoursesResponse>) {
         request(
             "/api/tillar/user-progress/",
@@ -307,14 +338,28 @@ extension APIManager {
         )
     }
     
-    func translate(_ req: translateRequest, completion: @escaping Completion<translateResponse>) {
-        request(
-            "/api/v1/translate",
-            method: .post,
-            parameters: req.dictionary(using: encoder),
-            needsAuth: false,
-            completion: completion
+    func getFrazes(completion: @escaping Completion<FrazesResponse>) {
+        let req = MicroserviceProxyRequest(
+            service: "phrases",
+            method: "GET",
+            endpoint: "/api/categories",
+            userId: true,
+            data: nil
         )
+        microserviceProxy(req, completion: completion)
+    }
+    
+    func translate(_ req: translateRequest, completion: @escaping Completion<translateResponse>) {
+        let dict = req.dictionary()?.mapValues { AnyCodable($0) }
+        
+        let proxyReq = MicroserviceProxyRequest(
+            service: "translator",
+            method: "POST",
+            endpoint: "/api/v1/translate",
+            userId: nil,
+            data: dict
+        )
+        microserviceProxy(proxyReq, completion: completion)
     }
     
 
@@ -419,8 +464,8 @@ extension APIManager {
         let req = MicroserviceProxyRequest(
             service: "notifications",
             method: "GET",
-            endpoint: "/api/v1/notification",
-            userId: true,
+            endpoint: "/v1/notification",
+            userId: nil,
             data: nil
         )
         microserviceProxy(req, completion: completion)

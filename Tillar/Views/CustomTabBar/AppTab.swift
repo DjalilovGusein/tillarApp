@@ -11,7 +11,7 @@ enum AppTab: Int, CaseIterable {
 
     var title: String {
         switch self {
-        case .home: return "Главны"
+        case .home: return "Главный"
         case .translator: return "Переводчик"
         case .chat: return "Чат"
         case .profile: return "Профиль"
@@ -20,10 +20,10 @@ enum AppTab: Int, CaseIterable {
 
     var iconName: String {
         switch self {
-        case .home: return "main"
-        case .translator: return "translate"
-        case .chat: return "chat"
-        case .profile: return "profile"
+        case .home: return "homeBar"
+        case .translator: return "translateBar"
+        case .chat: return "chatBar"
+        case .profile: return "profileBar"
         }
     }
 }

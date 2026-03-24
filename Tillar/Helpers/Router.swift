@@ -23,6 +23,8 @@ enum AppRoute: Hashable {
     case forgotPassword
     case resetPassword
     case tabBar
+    case otp(phone: String)
+    case phone
 }
 
 struct NavigationHost<Route: Hashable, Root: View, Destination: View>: View {
@@ -65,8 +67,12 @@ struct AppRootView: View {
                 TabBarRootView()
             case .signUp:
                 SignUpView()
+            case .otp(let phone):
+                EnterOTPView(phone: phone)
+            case .phone:
+                EnterPhoneView()
             }
-        }
+        }.hideKeyboardOnTap()
     }
 }
 

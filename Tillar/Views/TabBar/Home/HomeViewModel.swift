@@ -11,6 +11,8 @@ import SwiftUI
 enum HomeMode {
     case home
     case notifications
+    case lessons
+    case frazes
 }
 
 class HomeViewModel: ObservableObject {
@@ -18,6 +20,8 @@ class HomeViewModel: ObservableObject {
 
     // можно прокинуть зависимости сюда позже (api/service)
     let notificationsVM = NotificationsViewModel()
+    let lessonsVM = LessonsViewModel()
+    let frazesVM = FrazesViewModel()
 
     func openNotifications() {
         withAnimation(.easeInOut) {
@@ -28,6 +32,18 @@ class HomeViewModel: ObservableObject {
     func closeNotifications() {
         withAnimation(.easeInOut) {
             mode = .home
+        }
+    }
+    
+    func openFrazes() {
+        withAnimation(.easeInOut) {
+            mode = .frazes
+        }
+    }
+    
+    func openLessons() {
+        withAnimation(.easeInOut) {
+            mode = .lessons
         }
     }
 }
