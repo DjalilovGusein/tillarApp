@@ -9,32 +9,41 @@ import SwiftUI
 
 struct ChatView: View {
 
-    @StateObject private var vm = ChatViewModel()
+    @StateObject private var vm = ChatViewModel(currentUserId: UD.authUser?.keycloakUuid ?? "")
     @State private var showDetail = false
 
-    // Header tuning
     private let headerHeight: CGFloat = 250
     private let headerBottomRadius: CGFloat = 34
 
     var body: some View {
         ZStack(alignment: .top) {
             Color(.systemGroupedBackground).ignoresSafeArea()
-            VStack {
-                    header
-                        .frame(height: headerHeight)
-                        .ignoresSafeArea(edges: .top)
-                    contentCard
-                        .padding(.top,)
+
+            VStack(spacing: 0) {
+                header
+                    .frame(height: headerHeight)
+                    .ignoresSafeArea(edges: .top)
+                    .zIndex(2)
+
+                contentCard
+                    .padding(.top, 32)
+                    .zIndex(1)
             }
         }
         .fullScreenCover(isPresented: $showDetail) {
-            if let conversation = vm.selectedConversation {
+            if let room = vm.selectedChatRoom {
                 ChatDetailView(
-                    conversation: conversation,
+                    room: room,
                     vm: vm,
-                    onBack: { showDetail = false }
+                    onBack: {
+                        showDetail = false
+                        vm.loadChatRooms()
+                    }
                 )
             }
+        }
+        .onAppear {
+            vm.loadChatRooms()
         }
     }
 }
@@ -51,8 +60,14 @@ private extension ChatView {
                 topBar
                     .padding(.top, 80)
 
-                headerSearch
-                    .padding(.horizontal, 16)
+                VStack(spacing: 8) {
+                    headerSearch
+                    if !vm.filteredChatUsers.isEmpty && !vm.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        usersDropdown
+                            .animation(.easeInOut(duration: 0.2), value: vm.filteredChatUsers.count)
+                    }
+                }
+                .padding(.horizontal, 16)
 
                 avatarsRow
                     .padding(.bottom, 10)
@@ -60,9 +75,72 @@ private extension ChatView {
             .padding(.bottom, 18)
         }
     }
+    
+    var usersDropdown: some View {
+        ScrollView(showsIndicators: false) {
+            LazyVStack(spacing: 0) {
+                ForEach(vm.filteredChatUsers.prefix(6)) { user in
+                    Button {
+                        vm.selectUserFromSearch(user) { _ in
+                            showDetail = vm.selectedChatRoom != nil
+                        }
+                    } label: {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.white.opacity(0.16))
+                                    .frame(width: 42, height: 42)
+
+                                Text(initials(for: user))
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(.white)
+                            }
+
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(user.displayName.isEmpty ? user.username : user.displayName)
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(.white)
+
+                                Text("@\(user.username)")
+                                    .font(.system(size: 13, weight: .regular))
+                                    .foregroundStyle(.white.opacity(0.75))
+                            }
+
+                            Spacer()
+
+                            Circle()
+                                .fill(user.status.lowercased() == "online" ? Color.green : Color.gray.opacity(0.6))
+                                .frame(width: 10, height: 10)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+
+                    if user.id != vm.filteredChatUsers.prefix(6).last?.id {
+                        Divider()
+                            .overlay(Color.white.opacity(0.08))
+                            .padding(.leading, 68)
+                    }
+                }
+            }
+        }
+        .frame(maxHeight: 260)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color.white.opacity(0.14))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.18), radius: 14, x: 0, y: 8)
+        .transition(.move(edge: .top).combined(with: .opacity))
+    }
 
     var headerBackground: some View {
-        // gradient similar to screenshot
         LinearGradient(
             stops: [
                 .init(color: Color(red: 0.09, green: 0.22, blue: 0.55), location: 0.00),
@@ -73,7 +151,6 @@ private extension ChatView {
             endPoint: .bottomTrailing
         )
         .overlay(
-            // subtle light blob top-left (like iOS blur highlight)
             RadialGradient(
                 colors: [Color.white.opacity(0.20), Color.white.opacity(0.0)],
                 center: .topLeading,
@@ -123,21 +200,39 @@ private extension ChatView {
         .padding(.vertical, 11)
         .background(Color.white.opacity(0.18))
         .clipShape(Capsule())
+        .overlay(alignment: .top) {
+            if !vm.filteredChatUsers.isEmpty &&
+               !vm.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                usersDropdown
+                    .padding(.top, 58)
+                    .zIndex(999)
+            }
+        }
+        .zIndex(999)
     }
 
     var avatarsRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        // Array() wrapping avoids the ArraySlice / class-constrained error
+        let users: [ChatUser] = Array(vm.chatUsers.prefix(12))
+        return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 16) {
                 addAvatar
 
-                // можно заменить на vm.suggestedContacts / recentContacts,
-                // пока просто берем первые N из filteredConversations
-                ForEach(Array(vm.filteredConversations.prefix(12))) { c in
+                ForEach(users) { user in
+                    let title = user.displayName
                     MiniAvatarItem(
-                        title: c.name.components(separatedBy: " ").first ?? c.name,
-                        initials: c.initials,
-                        isOnline: c.isOnline
-                    )
+                        title: title.components(separatedBy: " ").first ?? title,
+                        initials: String(user.displayName.prefix(2).uppercased()),
+                        isOnline: user.isOnline
+                    ).onTapGesture {
+                        vm.createDirectRoom(with: user.id) { room in
+                            if let room = room {
+                                vm.selectChatRoom(room)
+                                showDetail = true
+                            }
+                            
+                        }
+                    }
                 }
             }
             .padding(.horizontal, 16)
@@ -151,7 +246,10 @@ private extension ChatView {
             VStack(spacing: 8) {
                 ZStack {
                     Circle()
-                        .strokeBorder(Color.white.opacity(0.55), style: StrokeStyle(lineWidth: 1.2, dash: [4, 3]))
+                        .strokeBorder(
+                            Color.white.opacity(0.55),
+                            style: StrokeStyle(lineWidth: 1.2, dash: [4, 3])
+                        )
                         .frame(width: 52, height: 52)
 
                     Image(systemName: "plus")
@@ -173,18 +271,24 @@ private extension ChatView {
 // MARK: - Content card (list)
 
 private extension ChatView {
+    
+    func initials(for user: ChatUser) -> String {
+        let source = user.displayName.isEmpty ? user.username : user.displayName
+        let parts = source.split(separator: " ")
+        let result = parts.prefix(2).compactMap { $0.first }.map { String($0) }.joined()
+        return result.isEmpty ? "?" : result.uppercased()
+    }
 
     var contentCard: some View {
         ScrollView(.vertical, showsIndicators: false) {
-            
             LazyVStack(spacing: 0) {
-                ForEach(vm.filteredConversations) { conversation in
-                    ConversationRowLikeScreenshot(conversation: conversation)
+                ForEach(vm.filteredChatRooms) { room in
+                    ConversationRowLikeScreenshot(room: room, currentUserId: vm.currentUserId)
                         .onTapGesture {
-                            vm.selectConversation(conversation)
+                            vm.selectChatRoom(room)
                             showDetail = true
                         }
-                    
+
                     Divider()
                         .padding(.leading, 78)
                 }
@@ -199,51 +303,50 @@ private extension ChatView {
         .shadow(color: .black.opacity(0.05), radius: 14, x: 0, y: -2)
         .padding(.horizontal, 0)
         .padding(.vertical, -60)
-        
     }
 }
 
-// MARK: - Row like screenshot
+// MARK: - Row
 
 private struct ConversationRowLikeScreenshot: View {
 
-    let conversation: Conversation
+    let room: ChatRoom
+    let currentUserId: String
 
     var body: some View {
         HStack(spacing: 14) {
-            avatar
+            avatarView
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text(conversation.name)
+                    Text(room.displayTitle(for: currentUserId))
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(Color.primaryText.opacity(0.9))
                         .lineLimit(1)
 
                     Spacer()
 
-                    Text(conversation.time)
+                    Text(room.formattedLastMessageAt)
                         .font(.system(size: 12, weight: .regular))
                         .foregroundStyle(Color.primaryText.opacity(0.35))
                 }
 
                 HStack(spacing: 6) {
-                    // если у тебя есть "isDelivered/hasRead" — тут можно показать галочки
-                    if conversation.unreadCount == 0 {
+                    if room.unreadCount == 0 {
                         Image(systemName: "checkmark")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(Color.blue.opacity(0.85))
                     }
 
-                    Text(conversation.lastMessage)
+                    Text(room.type == "group" ? "Group chat" : "")
                         .font(.system(size: 14, weight: .regular))
                         .foregroundStyle(Color.primaryText.opacity(0.45))
                         .lineLimit(1)
 
                     Spacer()
 
-                    if conversation.unreadCount > 0 {
-                        Text("\(conversation.unreadCount)")
+                    if room.unreadCount > 0 {
+                        Text("\(room.unreadCount)")
                             .font(.system(size: 12, weight: .bold))
                             .foregroundStyle(.white)
                             .frame(minWidth: 22, minHeight: 22)
@@ -258,23 +361,27 @@ private struct ConversationRowLikeScreenshot: View {
         .contentShape(Rectangle())
     }
 
-    private var avatar: some View {
-        ZStack(alignment: .bottomLeading) {
+    private var avatarView: some View {
+        let color = room.avatarColor(for: currentUserId)
+        let online = room.isOnline(for: currentUserId)
+        let initials = room.initials(for: currentUserId)
+
+        return ZStack(alignment: .bottomLeading) {
             Circle()
-                .fill(conversation.avatarColor.opacity(0.22))
+                .fill(color.opacity(0.22))
                 .frame(width: 54, height: 54)
 
-            Text(conversation.initials)
+            Text(initials)
                 .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(conversation.avatarColor)
+                .foregroundStyle(color)
                 .frame(width: 54, height: 54)
 
-            if conversation.isOnline {
+            if online {
                 Circle()
                     .fill(Color.green)
                     .frame(width: 12, height: 12)
                     .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                    .offset(x: 6, y: -2) // ближе к низу слева как на скрине
+                    .offset(x: 6, y: -2)
             }
         }
     }
@@ -335,6 +442,6 @@ private struct RoundedCorner: Shape {
 
 // MARK: - Preview
 
-#Preview("Chat List (Like Screenshot)") {
+#Preview("Chat List") {
     ChatView().environmentObject(TabBarViewModel())
 }

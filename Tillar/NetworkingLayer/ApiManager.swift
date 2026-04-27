@@ -38,37 +38,50 @@ final class APIManager {
 
     static let shared = APIManager()
 
-   // private let baseURL = "http://local.openedx.io:8000"
-    private let baseURL = "http://tillar.uz/apiman"
-    private let baseURLdev = "https://tillar.uz/api-test"
 
-    private let decoder: JSONDecoder = {
-        let d = JSONDecoder()
-        d.keyDecodingStrategy = .convertFromSnakeCase
-        return d
-    }()
+        private let environment: AppEnvironment
+        private let baseURL: String
 
-    private let encoder: JSONEncoder = {
+        private let decoder: JSONDecoder = {
+            let d = JSONDecoder()
+            d.keyDecodingStrategy = .convertFromSnakeCase
+            return d
+        }()
+
+        private let encoder: JSONEncoder = {
+            let e = JSONEncoder()
+            e.keyEncodingStrategy = .convertToSnakeCase
+            return e
+        }()
+    
+    private let camelCaseEncoder: JSONEncoder = {
         let e = JSONEncoder()
-        e.keyEncodingStrategy = .convertToSnakeCase
         return e
     }()
-    
-    private let staticHost = "local.openedx.io"
-    private let staticIP   = "172.20.20.32"
 
     private lazy var session: Session = {
         let cfg = URLSessionConfiguration.af.default
         cfg.timeoutIntervalForRequest = 30
         cfg.httpCookieStorage = .shared
-        
-        let interceptor = StaticDNSInterceptor(host: self.staticHost,
-                                               ip: self.staticIP)
-        
-        return Session(configuration: cfg, interceptor: interceptor)
+
+        #if DEBUG
+        let trustManager = ServerTrustManager(
+            allHostsMustBeEvaluated: false,
+            evaluators: [
+                "tillar.uz": DisabledTrustEvaluator()
+            ]
+        )
+        return Session(configuration: cfg, serverTrustManager: trustManager)
+        #else
+        return Session(configuration: cfg)
+        #endif
     }()
 
-    private init() {}
+        private init(environment: AppEnvironment = .current) {
+            self.environment = environment
+            self.baseURL = environment.baseURL
+        }
+
 
     // MARK: - Public toggles (если хочешь подцепить Loader/Toast)
     var onShowLoader: (() -> Void)?
@@ -89,7 +102,7 @@ final class APIManager {
 
     private func buildCookieHeader() -> String {
         let cookies = HTTPCookieStorage.shared.cookies ?? []
-        let relevant = cookies.filter { $0.domain == staticIP }
+        let relevant = cookies.filter { $0.domain == environment.staticIP }
         return relevant.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
     }
 
@@ -260,9 +273,19 @@ extension APIManager {
 
     func register(_ req: RegisterRequest, completion: @escaping Completion<RegisterResponse>) {
         request(
-            "/api/keycloak/register/",
+            "/keycloak/register/",
             method: .post,
             parameters: req.dictionary(using: encoder),
+            needsAuth: false,
+            completion: completion
+        )
+    }
+    
+    func otp(_ otp: OTP, completion: @escaping Completion<OTPResponse>) {
+        request(
+            "/keycloak/otp/verify-registration/",
+            method: .post,
+            parameters: otp.dictionary(using: encoder),
             needsAuth: false,
             completion: completion
         )
@@ -270,7 +293,7 @@ extension APIManager {
 
     func login(_ req: LoginRequest, completion: @escaping Completion<LoginResponse>) {
         request(
-            "/api/keycloak/login/",
+            "/keycloak/login/",
             method: .post,
             parameters: req.dictionary(using: encoder),
             needsAuth: false,
@@ -280,7 +303,7 @@ extension APIManager {
 
     func userInfo(completion: @escaping Completion<UserInfoResponse>) {
         request(
-            "/api/keycloak/userinfo/",
+            "/keycloak/userinfo/",
             method: .get,
             parameters: nil,
             needsAuth: true,
@@ -290,7 +313,7 @@ extension APIManager {
     
     func getCourses(completion: @escaping Completion<Lessons>) {
         request(
-            "/api/courses/v1/courses/",
+            "/courses/v1/courses/",
             method: .get,
             parameters: nil,
             needsAuth: true,
@@ -300,7 +323,7 @@ extension APIManager {
     
     func getCourseDetails(id: String, completion: @escaping Completion<CourseDetailsResponse>) {
         request(
-            "/api/course_home/navigation/\(id)",
+            "/course_home/navigation/\(id)",
             method: .get,
             parameters: nil,
             needsAuth: true,
@@ -310,7 +333,7 @@ extension APIManager {
     
     func getLessonContent(id: String, completion: @escaping Completion<LessonXBlock>) {
         request(
-            "/api/mobile/v1/xblock/\(id)",
+            "/mobile/v1/xblock/\(id)",
             method: .get,
             parameters: nil,
             needsAuth: true,
@@ -320,7 +343,7 @@ extension APIManager {
     
     func getUserProgress(completion: @escaping Completion<CoursesResponse>) {
         request(
-            "/api/tillar/user-progress/",
+            "/tillar/user-progress/",
             method: .get,
             parameters: nil,
             needsAuth: true,
@@ -330,7 +353,7 @@ extension APIManager {
     
     func getCategories(completion: @escaping Completion<СategoriesResponse>) {
         request(
-            "/api/level-assessment/categories/",
+            "/level-assessment/categories/",
             method: .get,
             parameters: nil,
             needsAuth: true,
@@ -344,10 +367,28 @@ extension APIManager {
             method: "GET",
             endpoint: "/api/categories",
             userId: true,
-            data: nil
+            data: nil,
+            params: nil
         )
         microserviceProxy(req, completion: completion)
     }
+    
+    //   /api/microservices/proxy/
+    
+    func textToSpeech(_ req: ttsRequest, completion: @escaping Completion<TTSResponse>) {
+        let dict = req.dictionary()?.mapValues { AnyCodable($0) }
+        
+        let proxyReq = MicroserviceProxyRequest(
+            service: "tts",
+            method: "POST",
+            endpoint: "/generate_speech",
+            userId: nil,
+            data: dict,
+            params: nil
+        )
+        microserviceProxy(proxyReq, completion: completion)
+    }
+    
     
     func translate(_ req: translateRequest, completion: @escaping Completion<translateResponse>) {
         let dict = req.dictionary()?.mapValues { AnyCodable($0) }
@@ -357,7 +398,8 @@ extension APIManager {
             method: "POST",
             endpoint: "/api/v1/translate",
             userId: nil,
-            data: dict
+            data: dict,
+            params: nil
         )
         microserviceProxy(proxyReq, completion: completion)
     }
@@ -365,7 +407,7 @@ extension APIManager {
 
     func logout(completion: @escaping Completion<APISuccessMessage>) {
         request(
-            "/api/keycloak/logout/",
+            "/keycloak/logout/",
             method: .post,
             parameters: nil,
             needsAuth: true,
@@ -385,7 +427,7 @@ extension APIManager {
 
         // В Postman refresh требует Authorization + X-CSRFToken :contentReference[oaicite:2]{index=2}
         request(
-            "/api/keycloak/refresh/",
+            "/keycloak/refresh/",
             method: .post,
             parameters: body.dictionary(using: encoder),
             needsAuth: true,
@@ -418,9 +460,9 @@ extension APIManager {
         completion: @escaping Completion<T>
     ) {
         request(
-            "/api/microservices/proxy/",
+            "/microservices/proxy/",
             method: .post,
-            parameters: req.dictionary(using: encoder),
+            parameters: req.dictionary(using: camelCaseEncoder),
             needsAuth: true,
             completion: completion
         )
@@ -432,7 +474,8 @@ extension APIManager {
             method: "GET",
             endpoint: "/v1/coins",
             userId: true,
-            data: nil
+            data: nil,
+            params: nil
         )
         microserviceProxy(req, completion: completion)
     }
@@ -444,7 +487,8 @@ extension APIManager {
             method: "GET",
             endpoint: "/api/v1/news",
             userId: nil,
-            data: nil
+            data: nil,
+            params: nil
         )
         microserviceProxy(req, completion: completion)
     }
@@ -455,7 +499,8 @@ extension APIManager {
             method: "POST",
             endpoint: "/ai/\(botId)",
             userId: true,
-            data: ["message": AnyCodable(message)]
+            data: ["message": AnyCodable(message)],
+            params: nil
         )
         microserviceProxy(req, completion: completion)
     }
@@ -466,7 +511,8 @@ extension APIManager {
             method: "GET",
             endpoint: "/v1/notification",
             userId: nil,
-            data: nil
+            data: nil,
+            params: nil
         )
         microserviceProxy(req, completion: completion)
     }
@@ -477,7 +523,8 @@ extension APIManager {
             method: "GET",
             endpoint: "/api/subscriptions-info",
             userId: false,
-            data: nil
+            data: nil,
+            params: nil
         )
         microserviceProxy(req, completion: completion)
     }
@@ -573,5 +620,182 @@ final class CookieStorage {
     func clear() {
         cookies = [:]
         rawCookies = [:]
+    }
+}
+
+
+import Foundation
+import Alamofire
+
+enum AppEnvironment {
+    case dev
+    case prod
+
+    static var current: AppEnvironment {
+        #if DEBUG
+        return .dev
+        #else
+        return .prod
+        #endif
+    }
+
+    var baseURL: String {
+        switch self {
+        case .dev:
+            return "https://tillar.uz/api-test" //"https://tillar.uz/api-test"
+        case .prod:
+            return "https://tillar.uz/api-test"// "http://tillar.uz/apiman"
+        }
+    }
+
+    var shouldUseStaticDNSInterceptor: Bool {
+        switch self {
+        case .dev:
+            return false // или true, если реально нужен только на dev
+        case .prod:
+            return false
+        }
+    }
+
+    var staticHost: String? {
+        switch self {
+        case .dev:
+            return "local.openedx.io"
+        case .prod:
+            return nil
+        }
+    }
+
+    var staticIP: String? {
+        switch self {
+        case .dev:
+            return "172.20.20.32"
+        case .prod:
+            return nil
+        }
+    }
+}
+
+extension APIManager {
+
+    func getAllChatUsers(completion: @escaping Completion<ChatUserResponse>) {
+        let req = MicroserviceProxyRequest(
+            service: "chat",
+            method: "GET",
+            endpoint: "/api/users/all",
+            userId: true,
+            data: nil,
+            params: nil
+        )
+        microserviceProxy(req, completion: completion)
+    }
+
+    func getChatUser(username: String, completion: @escaping Completion<ChatUser>) {
+        let req = MicroserviceProxyRequest(
+            service: "chat",
+            method: "GET",
+            endpoint: "/api/chat-rooms/user",
+            userId: true,
+            data: nil,
+            params: nil
+        )
+        microserviceProxy(req, completion: completion)
+    }
+
+    func updateChatUserStatus(username: String, status: String, completion: @escaping Completion<ChatUser>) {
+        request(
+            "/users/\(username)/status?status=\(status)",
+            method: .put,
+            parameters: nil,
+            needsAuth: true,
+            completion: completion
+        )
+    }
+
+    func createChatRoom(
+        requestBody: CreateChatRoomRequest,
+        completion: @escaping Completion<ChatRoomsSignleResponse>
+    ) {
+        let req = MicroserviceProxyRequest(
+            service: "chat",
+            method: "POST",
+            endpoint: "/api/chat-rooms",
+            userId: true,
+            data: [
+                "participantIds": AnyCodable(requestBody.participantIds),
+                "type": AnyCodable(requestBody.type),
+                "name": AnyCodable(requestBody.name)
+            ],
+            params: nil
+        )
+        microserviceProxy(req, completion: completion)
+    }
+    
+    func getUserChatRooms(userId: String, completion: @escaping Completion<ChatRoomsResponse>) {
+        let req = MicroserviceProxyRequest(
+            service: "chat",
+            method: "GET",
+            endpoint: "/api/chat-rooms/user",
+            userId: true,
+            data: nil,
+            params: nil
+        )
+        microserviceProxy(req, completion: completion)
+    }
+
+    func getChatRoom(roomId: Int, completion: @escaping Completion<ChatRoomsResponse>) {
+        let req = MicroserviceProxyRequest(
+            service: "chat",
+            method: "GET",
+            endpoint: "/api/chat-rooms/room",
+            userId: true,
+            data: nil,
+            params: ["roomId": AnyCodable(roomId)]
+        )
+        microserviceProxy(req, completion: completion)
+    }
+
+    func getChatMessages(
+        roomId: Int,
+        page: Int = 10,
+        size: Int = 50,
+        completion: @escaping Completion<ChatMessagesResponse>
+    ) {
+        let req = MicroserviceProxyRequest(
+            service: "chat",
+            method: "GET",
+            endpoint: "/api/chat-rooms/messages",
+            userId: false, data: nil,
+            params: [
+                "page": AnyCodable(page),
+                "size": AnyCodable(size),
+                "roomId": AnyCodable(roomId)
+            ]
+        )
+        microserviceProxy(req, completion: completion)
+    }
+
+    func markMessageAsRead(messageId: Int, completion: @escaping Completion<APISuccessMessage>) {
+        let req = MicroserviceProxyRequest(
+            service: "chat",
+            method: "PUT",
+            endpoint: "/api/chat-rooms",
+            userId: false,
+            data: [
+                "messageId": AnyCodable(messageId)
+            ],
+            params: nil
+        )
+        microserviceProxy(req, completion: completion)
+    }
+    
+    func getSocketToken(completion: @escaping Completion<SocketToken>) {
+        request(
+            "/microservices/ws-token/",
+            method: .get,
+            parameters: nil,
+            needsAuth: true,
+            completion: completion
+        )
     }
 }

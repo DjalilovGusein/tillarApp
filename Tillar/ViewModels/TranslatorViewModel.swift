@@ -5,11 +5,19 @@
 //  Created by Gusein Djalilov on 27/02/26.
 //
 
+//
+//  TranslatorViewModel.swift
+//  Tillar
+//
+//  Created by Gusein Djalilov on 27/02/26.
+//
+
 import Foundation
 import Combine
+import AVFoundation
 
 @MainActor
-final class TranslatorViewModel: ObservableObject {
+final class TranslatorViewModel: NSObject, ObservableObject {
 
     @Published var isLoading = false
     @Published var errorText: String?
@@ -28,8 +36,13 @@ final class TranslatorViewModel: ObservableObject {
     private let trigger = PassthroughSubject<TranslateQuery, Never>()
     private var cancellables = Set<AnyCancellable>()
     private var lastRequestID: UUID?
+    private var ttsResult: TTSResponse?
 
-    init() {
+    private var audioPlayer: AVAudioPlayer?
+
+    override init() {
+        super.init()
+
         let prepared = trigger
             .map { query -> TranslateQuery in
                 TranslateQuery(
@@ -53,6 +66,71 @@ final class TranslatorViewModel: ObservableObject {
 
     func scheduleTranslate(text: String, source: String, target: String) {
         trigger.send(.init(text: text, source: source, target: target))
+    }
+
+    func playSound() {
+        guard let translatedText = translate?.data?.translatedText,
+              !translatedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            errorText = "Нет текста для озвучивания"
+            return
+        }
+
+        isLoading = true
+        errorText = nil
+
+        APIManager.shared.textToSpeech(
+            ttsRequest(message: translatedText)
+        ) { [weak self] result in
+            Task { @MainActor in
+                guard let self else { return }
+
+                self.isLoading = false
+
+                switch result {
+                case .success(let tts):
+                    self.ttsResult = tts
+                    self.playReceivedAudio(from: tts)
+
+                case .failure(let err):
+                    self.errorText = err.localizedDescription
+                }
+            }
+        }
+    }
+
+    private func playReceivedAudio(from response: TTSResponse) {
+        guard let base64String = response.data?.audioBase64,
+              !base64String.isEmpty else {
+            errorText = "Пустой audioBase64"
+            return
+        }
+
+        let cleanedBase64 = base64String
+            .replacingOccurrences(of: "\n", with: "")
+            .replacingOccurrences(of: "\r", with: "")
+            .replacingOccurrences(of: " ", with: "")
+
+        guard let audioData = Data(base64Encoded: cleanedBase64) else {
+            errorText = "Не удалось декодировать base64"
+            return
+        }
+
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .default, options: [.duckOthers])
+            try session.setActive(true)
+
+            audioPlayer = try AVAudioPlayer(data: audioData)
+            audioPlayer?.prepareToPlay()
+            audioPlayer?.play()
+        } catch {
+            errorText = "Ошибка воспроизведения: \(error.localizedDescription)"
+        }
+    }
+
+    func stopSound() {
+        audioPlayer?.stop()
+        audioPlayer = nil
     }
 
     func translate(text: String, source: String, reciepient: String) {

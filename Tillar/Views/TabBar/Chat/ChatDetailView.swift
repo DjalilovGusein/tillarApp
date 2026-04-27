@@ -9,17 +9,18 @@ import SwiftUI
 
 struct ChatDetailView: View {
 
-    let conversation: Conversation
+    let room: ChatRoom
     @ObservedObject var vm: ChatViewModel
     let onBack: () -> Void
-
+    @State private var didInitialScroll = false
+    @FocusState private var isMessageFieldFocused: Bool
+    
     var body: some View {
         ZStack {
             BackgroundGradient()
                 .cornerRadius(32)
                 .ignoresSafeArea()
                 .padding(.bottom, 80)
-                
 
             VStack(spacing: 0) {
                 chatNavBar
@@ -27,12 +28,14 @@ struct ChatDetailView: View {
                     .padding(.bottom, 8)
                 inputBar
             }
-        }
+        }.onAppear(perform: {
+            vm.markAsRead()
+        })
         .hideKeyboardOnTap()
         .navigationBarBackButtonHidden(true)
     }
 
-    // MARK: - Navigation Bar (like screenshots)
+    // MARK: - Navigation Bar
 
     private var chatNavBar: some View {
         HStack(spacing: 12) {
@@ -45,19 +48,17 @@ struct ChatDetailView: View {
             }
             .buttonStyle(.plain)
 
-            // Avatar
             ZStack(alignment: .bottomTrailing) {
                 Circle()
                     .fill(Color.white.opacity(0.25))
                     .frame(width: 36, height: 36)
 
-                Text(conversation.initials)
+                Text(room.initials(for: vm.currentUserId))
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(.white.opacity(0.95))
                     .frame(width: 36, height: 36)
 
-                // online dot (for personal chat)
-                if conversation.isOnline {
+                if room.isOnline(for: vm.currentUserId) {
                     Circle()
                         .fill(Color.green)
                         .frame(width: 10, height: 10)
@@ -67,12 +68,11 @@ struct ChatDetailView: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(conversation.name)
+                Text(room.displayTitle(for: vm.currentUserId))
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
 
-                // Подзаголовок как на скринах
                 Text(navSubtitle)
                     .font(.system(size: 12, weight: .regular))
                     .foregroundStyle(.white.opacity(0.75))
@@ -96,41 +96,108 @@ struct ChatDetailView: View {
     }
 
     private var navSubtitle: String {
-        // Если у тебя есть разные типы диалога — подставь свою логику.
-        // Сейчас: online -> как на личном чате, иначе как на группе (пример).
-        if conversation.isOnline {
-            return "Был онлайн в 14:30" // подставь реальное поле, если есть
+        if room.type != "GROUP" {
+            return room.isOnline(for: vm.currentUserId) ? "В сети" : "Не в сети"
         } else {
-            return "6 участников, 4 в сети" // подставь реальное поле, если есть
+            let onlineCount = room.participants.filter { $0.status == "online" }.count
+            return "\(room.participants.count) участников, \(onlineCount) в сети"
         }
     }
 
-    // MARK: - Messages
 
     private var messagesArea: some View {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVStack(spacing: 10) {
                     ForEach(vm.messages) { message in
-                        MessageBubbleLikeScreenshot(message: message)
-                            .id(message.id)
+                        MessageBubbleLikeScreenshot(
+                            message: message,
+                            currentUsername: vm.currentUsername
+                        )
+                        .id(message.id)
                     }
+
+                    if let typingUser = vm.typingUserInSelectedRoom {
+                        TypingBubbleView(user: typingUser)
+                            .id("typing_bubble")
+                    }
+
+                    Color.clear
+                        .frame(height: 80)
+                        .id("bottom_anchor")
                 }
                 .padding(.horizontal, 12)
                 .padding(.top, 6)
-                .padding(.bottom, 32)
+                .padding(.bottom, 16)
             }
-            .onChange(of: vm.messages.count) { _ in
-                if let last = vm.messages.last {
-                    withAnimation(.easeOut(duration: 0.25)) {
-                        proxy.scrollTo(last.id, anchor: .bottom)
+            .onAppear {
+                guard !didInitialScroll else { return }
+                didInitialScroll = true
+
+                DispatchQueue.main.async {
+                    scrollToBottom(proxy, animated: false)
+                }
+            }
+            .onChange(of: isMessageFieldFocused) { focused in
+                if focused {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                        scrollToBottom(proxy, animated: true)
+                    }
+                } else {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+                        scrollToBottom(proxy, animated: true)
                     }
                 }
             }
         }
     }
+    
+    private func scrollToBottom(_ proxy: ScrollViewProxy, animated: Bool) {
+        if animated {
+            withAnimation(.easeOut(duration: 0.25)) {
+                proxy.scrollTo("bottom_anchor", anchor: .bottom)
+            }
+        } else {
+            proxy.scrollTo("bottom_anchor", anchor: .bottom)
+        }
+    }
+    
+    private struct TypingBubbleView: View {
+        let user: ChatUser
 
-    // MARK: - Input Bar (like screenshots)
+        var body: some View {
+            HStack {
+                HStack(spacing: 3) {
+                    Text("печатает")
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundStyle(.white.opacity(0.95))
+
+                    HStack(spacing: 6) {
+                        Circle()
+                            .frame(width: 6, height: 6)
+                        Circle()
+                            .frame(width: 6, height: 6)
+                        Circle()
+                            .frame(width: 6, height: 6)
+                    }
+                    .foregroundStyle(Color.white.opacity(0.65))
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(Color.white.opacity(0.28))
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .frame(
+                    maxWidth: UIScreen.main.bounds.width * 0.72,
+                    alignment: .leading
+                )
+
+                Spacer(minLength: 48)
+            }
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
+        }
+    }
+
+    // MARK: - Input Bar
 
     private var inputBar: some View {
         VStack(spacing: 0) {
@@ -145,15 +212,21 @@ struct ChatDetailView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                
+
                 HStack(spacing: 8) {
                     TextField("Сообщение", text: $vm.messageText, axis: .vertical)
+                        .focused($isMessageFieldFocused)
                         .font(.system(size: 15, weight: .regular))
                         .foregroundStyle(Color.primaryText)
                         .lineLimit(1...4)
                         .padding(.vertical, 10)
                         .padding(.leading, 14)
-                    
+                        .onChange(of: vm.messageText) { newValue in
+                            if !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                vm.sendTyping()
+                            }
+                        }
+
                     Spacer(minLength: 0)
                 }
                 .background(
@@ -164,7 +237,7 @@ struct ChatDetailView: View {
                                 .stroke(Color.primaryObject.opacity(0.12), lineWidth: 1)
                         )
                 )
-                
+
                 Button {
                     vm.sendMessage()
                 } label: {
@@ -181,11 +254,11 @@ struct ChatDetailView: View {
                                 )
                             )
                             .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
-                        
+
                         Image(systemName: "paperplane.fill")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(.white)
-                            .offset(x: 2) // визуальный баланс
+                            .offset(x: 2)
                     }
                     .frame(width: 64, height: 44)
                 }
@@ -206,33 +279,38 @@ struct ChatDetailView: View {
     }
 }
 
-// MARK: - Bubble (like screenshots)
+// MARK: - Bubble
 
 private struct MessageBubbleLikeScreenshot: View {
 
     let message: ChatMessage
+    let currentUsername: String
+
+    private var isFromMe: Bool {
+        message.sender.username == currentUsername
+    }
 
     var body: some View {
         HStack {
-            if message.isFromMe { Spacer(minLength: 48) }
+            if isFromMe { Spacer(minLength: 48) }
 
-            VStack(alignment: message.isFromMe ? .trailing : .leading, spacing: 6) {
-                Text(message.text)
+            VStack(alignment: isFromMe ? .trailing : .leading, spacing: 6) {
+                Text(message.content)
                     .font(.system(size: 15, weight: .regular))
-                    .foregroundStyle(message.isFromMe ? .white : .white.opacity(0.95))
+                    .foregroundStyle(isFromMe ? .white : .white.opacity(0.95))
                     .multilineTextAlignment(.leading)
 
                 HStack(spacing: 6) {
-                    Text(message.time)
+                    Text(message.formattedTime)
                         .font(.system(size: 11, weight: .regular))
                         .foregroundStyle(
-                            message.isFromMe
+                            isFromMe
                             ? Color.white.opacity(0.75)
                             : Color.white.opacity(0.65)
                         )
 
-                    if message.isFromMe {
-                        Image(systemName: message.isRead ? "checkmark" : "checkmark")
+                    if isFromMe {
+                        Image(systemName: message.isRead ? "checkmark.circle" : "checkmark")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(Color.white.opacity(0.75))
                     }
@@ -242,24 +320,27 @@ private struct MessageBubbleLikeScreenshot: View {
             .padding(.vertical, 10)
             .background(bubbleBackground)
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .frame(maxWidth: UIScreen.main.bounds.width * 0.72, alignment: message.isFromMe ? .trailing : .leading)
+            .frame(
+                maxWidth: UIScreen.main.bounds.width * 0.72,
+                alignment: isFromMe ? .trailing : .leading
+            )
 
-            if !message.isFromMe { Spacer(minLength: 48) }
+            if !isFromMe { Spacer(minLength: 48) }
         }
     }
 
     private var bubbleBackground: some View {
         Group {
-            if message.isFromMe {
-                Color(red: 0.05, green: 0.15, blue: 0.30).opacity(0.75) // темный как на скрине
+            if isFromMe {
+                Color(red: 0.05, green: 0.15, blue: 0.30).opacity(0.75)
             } else {
-                Color.white.opacity(0.28) // светлый полупрозрачный
+                Color.white.opacity(0.28)
             }
         }
     }
 }
 
-// MARK: - Small circle buttons in navbar
+// MARK: - Navbar circle buttons
 
 private struct CircleIconButton: View {
     let systemName: String
@@ -306,19 +387,19 @@ private struct BackgroundGradient: View {
 
 // MARK: - Preview
 
-#Preview("Chat Detail (New)") {
-    ChatDetailView(
-        conversation: Conversation(
-            name: "Bekzod Odilboyev",
-            initials: "BO",
-            avatarColor: .blue,
-            lastMessage: "Salom!",
-            time: "10:30",
-            unreadCount: 2,
-            isOnline: true
-        ),
-        vm: ChatViewModel(),
-        onBack: {}
+#Preview("Chat Detail") {
+    let vm = ChatViewModel(currentUserId: UD.authUser?.keycloakUuid ?? "")
+    let mockRoom = ChatRoom(
+        id: 101,
+        name: nil,
+        type: "direct",
+        participants: [
+            ChatUser(id: "1", username: "gusein", displayName: "Gusein Djalilov", status: "online"),
+            ChatUser(id: "2", username: "bekzod", displayName: "Bekzod Odilboyev", status: "online")
+        ],
+        createdAt: "2026-03-26T10:00:00Z",
+        lastMessageAt: "2026-03-26T10:30:00Z",
+        unreadCount: 2
     )
+    ChatDetailView(room: mockRoom, vm: vm, onBack: {})
 }
-

@@ -125,15 +125,20 @@ private struct LessonsContent: View {
     let onBack: () -> Void
     
     var body: some View {
-        switch vm.mode {
-        case .list:
-            LessonsListContent(vm: vm, onBack: onBack)
-            
-        case .details:
-            LessonDetailsContent(vm: vm) {
-                vm.goBackToLessons()
+        Group {
+            switch vm.mode {
+            case .list:
+                LessonsListContent(vm: vm, onBack: onBack)
+                
+            case .details:
+                LessonDetailsContent(vm: vm) {
+                    vm.goBackToLessons()
+                }
             }
+        }.task {
+            vm.loadLessonsIfNeeded()
         }
+        
     }
     
     

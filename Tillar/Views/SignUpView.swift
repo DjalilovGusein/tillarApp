@@ -16,6 +16,7 @@ struct SignUpView: View {
     @State private var name: String = ""
     @State private var userName: String = ""
     @State private var email: String = ""
+    @State private var phoneNumber: String = ""
     @State private var password: String = ""
 
     private var canSubmit: Bool {
@@ -54,6 +55,15 @@ struct SignUpView: View {
 
                 // MARK: - Form
                 VStack(spacing: 12) {
+                    
+                    LabeledField(
+                        text: $phoneNumber,
+                        placeholder: "Номер телефона",
+                        contentType: .telephoneNumber,
+                        keyboardType: .phonePad,
+                        isSecure: false
+                    )
+                    
                     LabeledField(
                         text: $surname,
                         placeholder: "Фамилия",
@@ -104,10 +114,10 @@ struct SignUpView: View {
 
                 // MARK: - Next Button
                 Button {
-                    viewModel.register(username: userName, password: password, email: email, firstName: name, lastName: surname) { response in
+                    viewModel.register(username: userName, password: password, email: email, firstName: name, lastName: surname,phoneNumber: "998\(phoneNumber.replacingOccurrences(of: " ", with: "").replacingOccurrences(of: "+", with: ""))") { response in
                         guard let isSuccess = response.success else { return }
                         if isSuccess {
-                            self.router.push(.tabBar)
+                            self.router.push(.otp(phone: "998\(phoneNumber)"))
                         }
                     }
                 } label: {

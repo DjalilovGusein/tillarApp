@@ -159,9 +159,14 @@ struct TranslatorView: View {
 
             HStack {
                 Spacer()
-                Image(systemName: "speaker.wave.2.fill")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(Color.gray.opacity(0.6))
+                Button {
+                        translateVM.playSound()
+                    } label: {
+                        Image(systemName: "speaker.wave.2.fill")
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundStyle(Color.gray.opacity(0.6))
+                    }
+                    .disabled((translateVM.translate?.data?.translatedText ?? "").isEmpty)
             }
         }
         .padding(16)

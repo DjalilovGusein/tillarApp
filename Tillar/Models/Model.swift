@@ -13,9 +13,30 @@ struct ErrorResponse: Decodable {
     let errors: [String]?
 }
 
+struct SocketToken: Codable {
+    let success: Bool?
+    let token, userID: String?
+}
+
 struct APISuccessMessage: Decodable {
     let success: Bool?
     let message: String?
+}
+
+// "message": "Привет мир"
+struct ttsRequest: Codable {
+    let message: String?
+}
+
+struct TTSResponse: Codable {
+    let success: Bool?
+    let status: Int?
+    let data: TTSDataClass?
+}
+
+// MARK: - DataClass
+struct TTSDataClass: Codable {
+    let audioBase64, format: String?
 }
 
 
@@ -47,6 +68,23 @@ struct RegisterRequest: Encodable {
     let password: String
     let firstName: String
     let lastName: String
+    let phoneNumber: String?
+}
+
+struct OTP: Codable {
+    let phone_number: String
+    let code: String
+}
+
+struct OTPResponse: Codable {
+    let success: Bool?
+    let message: String?
+    let user: User?
+}
+
+// MARK: - User
+struct User: Codable {
+    let username, email, firstName, lastName: String?
 }
 
 struct LoginRequest: Encodable {
@@ -65,17 +103,36 @@ struct AuthTokens: Decodable {
     let tokenType: String?
 }
 
-struct AuthUser: Decodable {
-    let id: Int?
-    let username: String?
-    let email: String?
-    let firstName: String?
-    let lastName: String?
-    let isActive: Bool?
-    let isStaff: Bool?
-    let keycloakUuid: String?
-}
+public struct AuthUser: Codable {
+    public let id: Int?
+    public let username: String?
+    public let email: String?
+    public let firstName: String?
+    public let lastName: String?
+    public let isActive: Bool?
+    public let isStaff: Bool?
+    public let keycloakUuid: String?
 
+    public init(
+        id: Int?,
+        username: String?,
+        email: String?,
+        firstName: String?,
+        lastName: String?,
+        isActive: Bool?,
+        isStaff: Bool?,
+        keycloakUuid: String?
+    ) {
+        self.id = id
+        self.username = username
+        self.email = email
+        self.firstName = firstName
+        self.lastName = lastName
+        self.isActive = isActive
+        self.isStaff = isStaff
+        self.keycloakUuid = keycloakUuid
+    }
+}
 // POST /api/keycloak/register/
 struct RegisterResponse: Decodable {
     let success: Bool?
@@ -115,6 +172,7 @@ struct MicroserviceProxyRequest: Encodable {
     let endpoint: String
     let userId: Bool?
     let data: [String: AnyCodable]?
+    let params: [String: AnyCodable]?
 }
 
 // MARK: - Coins

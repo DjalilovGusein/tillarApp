@@ -38,6 +38,7 @@ final class TabBarViewModel: ObservableObject {
                 switch result {
                 case .success(let user):
                     self.user = user
+                    UD.authUser = user.user
                 case .failure(let err):
                     self.errorText = err.localizedDescription
                 }
